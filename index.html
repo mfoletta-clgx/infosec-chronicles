@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>InfoSec Chronicles: The Byte-Sized Adventures</title>
+<meta name="description" content="Two-minute retro pixel quests for the information security team." />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23241d3a'/><rect x='4' y='3' width='8' height='6' fill='%23e8b48c'/><rect x='4' y='2' width='8' height='2' fill='%235a3620'/><rect x='4' y='9' width='8' height='4' fill='%232a9c9c'/></svg>" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ---------------------------------------------------------- MAIN MENU -->
+  <section id="screen-menu" class="screen">
+    <header class="title-block">
+      <h1 class="logo"><span>InfoSec</span> Chronicles</h1>
+      <p class="tagline">The Byte-Sized Adventures &mdash; a new 2-minute quest every couple of weeks.</p>
+    </header>
+
+    <div class="panel">
+      <h2>Episode archive</h2>
+      <p class="hint">New quests drop every couple of weeks. Every episode you add stays here, playable any time.</p>
+      <div id="episode-list" class="episode-list"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Ops menu</h2>
+      <div class="row wrap">
+        <button class="btn" data-go="lab">Character Lab</button>
+        <button class="btn" data-go="builder">Mission Builder</button>
+        <button class="btn" id="btn-upload">Upload mission file</button>
+        <input type="file" id="file-mission" accept=".json,application/json" hidden />
+        <button class="btn ghost" id="btn-clear-progress">Reset badges</button>
+      </div>
+      <p class="hint">Badges earned: <span id="badge-count">0</span>. Everything is stored in this browser only.</p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- BRIEFING -->
+  <section id="screen-brief" class="screen" hidden>
+    <div class="panel brief">
+      <p class="eyebrow" id="brief-place">Location</p>
+      <h2 id="brief-title">Mission</h2>
+      <p id="brief-objective" class="objective"></p>
+      <div id="brief-cast" class="cast-strip"></div>
+      <div id="brief-buff" class="buff"></div>
+      <div class="controls-help">
+        <span><b>Arrows / WASD</b> move</span>
+        <span><b>Space / Enter</b> talk &amp; grab</span>
+        <span><b>B</b> companion radar</span>
+        <span class="only-touch">Use the on-screen pad</span>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="btn-start">Start mission</button>
+        <button class="btn ghost" data-go="menu">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------------- PLAY -->
+  <section id="screen-play" class="screen play" hidden>
+    <div class="hud">
+      <div class="hud-left">
+        <p class="eyebrow" id="hud-place"></p>
+        <p id="hud-objective" class="hud-objective"></p>
+        <p id="hud-step" class="hud-step"></p>
+      </div>
+      <div class="hud-right">
+        <span class="timer" id="hud-timer">00:00</span>
+        <button class="btn tiny ghost" data-go="menu">Quit</button>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <canvas id="stage" width="320" height="240"></canvas>
+      <div id="toast" class="toast" hidden></div>
+
+      <div id="dialogue" class="dialogue" hidden>
+        <img id="dlg-portrait" class="portrait" alt="" />
+        <div class="dlg-body">
+          <p class="dlg-name" id="dlg-name"></p>
+          <p class="dlg-text" id="dlg-text"></p>
+        </div>
+        <span class="dlg-more" id="dlg-more" hidden>&#9660;</span>
+      </div>
+
+      <div id="trivia" class="trivia" hidden>
+        <p class="eyebrow">Final check</p>
+        <p id="trivia-question" class="trivia-q"></p>
+        <div id="trivia-choices" class="choices" hidden></div>
+        <form id="trivia-free" class="row">
+          <input id="trivia-input" type="text" autocomplete="off" placeholder="Type your answer" />
+          <button class="btn primary" type="submit">Submit</button>
+        </form>
+        <p id="trivia-feedback" class="feedback"></p>
+        <button class="btn tiny ghost" id="trivia-hint" hidden>Need a hint?</button>
+      </div>
+    </div>
+
+    <p id="prompt" class="prompt" hidden></p>
+
+    <div class="touch-controls">
+      <div class="dpad">
+        <button class="pad up" data-pad="up" aria-label="Up">&#9650;</button>
+        <button class="pad left" data-pad="left" aria-label="Left">&#9664;</button>
+        <button class="pad right" data-pad="right" aria-label="Right">&#9654;</button>
+        <button class="pad down" data-pad="down" aria-label="Down">&#9660;</button>
+      </div>
+      <div class="action-buttons">
+        <button class="pad round" id="btn-companion" aria-label="Companion">PET</button>
+        <button class="pad round primary" id="btn-action" aria-label="Action">A</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ WIN -->
+  <section id="screen-win" class="screen" hidden>
+    <div class="panel win">
+      <p class="eyebrow">Mission complete</p>
+      <h2 id="win-title"></h2>
+      <div class="badge" id="win-badge"></div>
+      <p id="win-outro" class="objective"></p>
+      <ul class="stats">
+        <li><span id="win-time">0s</span><small>time</small></li>
+        <li><span id="win-score">0</span><small>score</small></li>
+        <li><span id="win-misses">0</span><small>wrong answers</small></li>
+      </ul>
+      <div class="row wrap">
+        <button class="btn primary" id="btn-next">Next episode</button>
+        <button class="btn" id="btn-share-win">Copy share link</button>
+        <button class="btn ghost" data-go="menu">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------- CHARACTER LAB -->
+  <section id="screen-lab" class="screen" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Character Lab</h2>
+        <button class="btn ghost tiny" data-go="menu">Back</button>
+      </div>
+      <p class="hint">Make each sprite look like the real person (and their real pet). Describe them, upload a photo to auto-match colors, or fine-tune by hand.</p>
+
+      <div class="lab">
+        <aside class="roster">
+          <div class="row wrap">
+            <button class="btn tiny" id="btn-new-human">+ Person</button>
+            <button class="btn tiny" id="btn-new-pet">+ Pet</button>
+          </div>
+          <div id="roster-list" class="roster-list"></div>
+          <div class="row wrap">
+            <button class="btn tiny ghost" id="btn-export-roster">Export team</button>
+            <button class="btn tiny ghost" id="btn-import-roster">Import team</button>
+            <button class="btn tiny ghost" id="btn-reset-roster">Reset</button>
+            <input type="file" id="file-roster" accept=".json,application/json" hidden />
+          </div>
+        </aside>
+
+        <div class="editor" id="editor">
+          <div class="preview-row">
+            <div class="preview-card">
+              <canvas id="lab-preview" width="80" height="80"></canvas>
+              <div class="row center">
+                <button class="btn tiny ghost" data-dir="down">&#9660;</button>
+                <button class="btn tiny ghost" data-dir="left">&#9664;</button>
+                <button class="btn tiny ghost" data-dir="right">&#9654;</button>
+                <button class="btn tiny ghost" data-dir="up">&#9650;</button>
+              </div>
+            </div>
+            <div class="preview-card photo-card">
+              <img id="lab-photo" class="photo" alt="" hidden />
+              <div id="lab-photo-empty" class="photo-empty">No photo</div>
+              <div class="row center">
+                <button class="btn tiny" id="btn-photo">Match from photo</button>
+                <input type="file" id="file-photo" accept="image/*" hidden />
+              </div>
+              <p class="hint tiny-hint">The photo never leaves this browser &mdash; only the colors are read.</p>
+            </div>
+          </div>
+
+          <label class="field"><span>Name</span><input id="f-name" type="text" placeholder="Madison" /></label>
+          <div class="row">
+            <label class="field"><span>Type</span>
+              <select id="f-role"><option value="human">Person</option><option value="pet">Pet</option></select>
+            </label>
+            <label class="field" id="f-title-wrap"><span>Team role</span><input id="f-title" type="text" placeholder="Threat Intel" /></label>
+            <label class="field" id="f-owner-wrap" hidden><span>Belongs to</span><input id="f-owner" type="text" placeholder="Madison" /></label>
+          </div>
+
+          <label class="field"><span>Describe them (plain English)</span>
+            <textarea id="f-describe" rows="2" placeholder="short curly dark brown hair, glasses, beard, teal hoodie, navy jeans"></textarea>
+          </label>
+          <div class="row wrap">
+            <button class="btn tiny" id="btn-apply-describe">Build sprite from description</button>
+            <button class="btn tiny ghost" id="btn-randomize">Surprise me</button>
+          </div>
+
+          <div id="human-fields">
+            <div class="row wrap swatches">
+              <label class="swatch"><span>Skin</span><input type="color" id="c-skin" /></label>
+              <label class="swatch"><span>Hair</span><input type="color" id="c-hair" /></label>
+              <label class="swatch"><span>Eyes</span><input type="color" id="c-eye" /></label>
+              <label class="swatch"><span>Shirt</span><input type="color" id="c-shirt" /></label>
+              <label class="swatch"><span>Pants</span><input type="color" id="c-pants" /></label>
+              <label class="swatch"><span>Shoes</span><input type="color" id="c-shoes" /></label>
+              <label class="swatch"><span>Hat</span><input type="color" id="c-hat" /></label>
+            </div>
+            <div class="row wrap toggles">
+              <label><input type="checkbox" id="t-long" /> Long hair</label>
+              <label><input type="checkbox" id="t-glasses" /> Glasses</label>
+              <label><input type="checkbox" id="t-beard" /> Facial hair</label>
+              <label><input type="checkbox" id="t-hat" /> Hat</label>
+            </div>
+          </div>
+
+          <div id="pet-fields" hidden>
+            <div class="row">
+              <label class="field"><span>Species</span><select id="f-species"></select></label>
+            </div>
+            <div class="row wrap swatches">
+              <label class="swatch"><span>Coat</span><input type="color" id="c-coat" /></label>
+              <label class="swatch"><span>Markings</span><input type="color" id="c-accent" /></label>
+              <label class="swatch"><span>Nose</span><input type="color" id="c-nose" /></label>
+              <label class="swatch"><span>Eyes</span><input type="color" id="c-peye" /></label>
+            </div>
+            <p class="hint" id="pet-buff-note"></p>
+          </div>
+
+          <div class="row wrap">
+            <button class="btn primary" id="btn-save-member">Save to team</button>
+            <button class="btn ghost" id="btn-delete-member">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------- MISSION BUILDER -->
+  <section id="screen-builder" class="screen" hidden>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Mission Builder</h2>
+        <button class="btn ghost tiny" data-go="menu">Back</button>
+      </div>
+      <p class="hint">Write this episode's inside joke. Everything below maps 1:1 to the mission JSON file &mdash; download it, commit it, or share the link.</p>
+
+      <div class="row">
+        <label class="field grow"><span>Title</span><input id="b-title" type="text" placeholder="Operation: Maui Token Recovery" /></label>
+        <label class="field"><span>Mission id</span><input id="b-id" type="text" placeholder="ep-04-something" /></label>
+      </div>
+      <div class="row">
+        <label class="field"><span>Hero</span><input id="b-hero" list="cast-names" placeholder="Madison" /></label>
+        <label class="field"><span>Companion pet</span><input id="b-pet" list="pet-names" placeholder="Luna" /></label>
+        <label class="field"><span>Setting</span><select id="b-theme"></select></label>
+      </div>
+      <datalist id="cast-names"></datalist>
+      <datalist id="pet-names"></datalist>
+
+      <label class="field"><span>Objective</span><input id="b-objective" type="text" placeholder="Find Rob on the beach and retrieve the lost API key!" /></label>
+      <label class="field"><span>Dialogue &mdash; one line per row, "Name: what they say"</span>
+        <textarea id="b-dialogue" rows="5" placeholder="Rob: Aloha! I dropped the key somewhere near the tiki bar.&#10;Luna (Pet): *Bark!* I smell coconut sunscreen and a 2FA token!"></textarea>
+      </label>
+      <div class="row">
+        <label class="field grow"><span>Trivia question</span><input id="b-question" type="text" placeholder="What is the capital of Hawaii that Rob visited?" /></label>
+        <label class="field"><span>Answer</span><input id="b-answer" type="text" placeholder="Honolulu" /></label>
+      </div>
+      <div class="row">
+        <label class="field grow"><span>Hint (optional)</span><input id="b-hint" type="text" /></label>
+        <label class="field"><span>Badge reward</span><input id="b-reward" type="text" placeholder="Byte-Sized Badge" /></label>
+      </div>
+
+      <div class="row wrap">
+        <button class="btn primary" id="btn-build-play">Play it now</button>
+        <button class="btn" id="btn-build-download">Download JSON</button>
+        <button class="btn" id="btn-build-share">Copy share link</button>
+        <button class="btn ghost" id="btn-build-load">Load a JSON file</button>
+        <input type="file" id="file-builder" accept=".json,application/json" hidden />
+      </div>
+      <pre id="b-preview" class="code"></pre>
+    </div>
+  </section>
+
+  <p id="flash" class="flash" hidden></p>
+</div>
+
+<script src="js/appearance.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/world.js"></script>
+<script src="js/roster.js"></script>
+<script src="js/mission.js"></script>
+<script src="js/missions.builtin.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

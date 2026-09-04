@@ -1,0 +1,20 @@
+{
+  "missionId": "ep-04-template",
+  "title": "Operation: Copy This File",
+  "hero": "Madison",
+  "companionPet": "Luna",
+  "objective": "Recover the USB drive someone found in the parking lot.",
+  "theme": "office",
+  "reward": "Curiosity Contained",
+  "dialogue": [
+    "Rob: Someone plugged it in. I watched it happen. I could not stop it in time.",
+    "Andrew: It was labeled 'SALARIES_2026'. Of course it was.",
+    "Luna (Pet): *sniff* smells like regret and cheap plastic."
+  ],
+  "triviaRiddle": {
+    "question": "What should you do with a USB drive you found in the parking lot?",
+    "answer": "hand it to security",
+    "accept": ["hand it to security", "give it to security", "report it", "do not plug it in", "turn it in"],
+    "hint": "Whatever you do, do not plug it in."
+  }
+}
