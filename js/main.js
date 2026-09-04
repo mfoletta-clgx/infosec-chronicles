@@ -520,6 +520,7 @@
     const h = location.hash.replace(/^#/, '');
     if (!h) return false;
     const params = new URLSearchParams(h);
+    if (params.has('builder')) { openBuilder(); return true; }
     if (params.get('play')) {
       try {
         const raw = JSON.parse(b64decode(params.get('play')));
@@ -548,8 +549,12 @@
     $('btn-next').addEventListener('click', nextEpisode);
     $('btn-share-win').addEventListener('click', () => copy(shareLink(currentRaw)));
 
-    $('btn-upload').addEventListener('click', () => $('file-mission').click());
-    $('file-mission').addEventListener('change', e => readJSONFile(e.target, raw => addMission(raw, true)));
+    // Authoring entry points are unlisted; reach them at #builder.
+    const upload = $('btn-upload');
+    if (upload) {
+      upload.addEventListener('click', () => $('file-mission').click());
+      $('file-mission').addEventListener('change', e => readJSONFile(e.target, raw => addMission(raw, true)));
+    }
 
     $('btn-clear-progress').addEventListener('click', () => {
       saveProgress({});
