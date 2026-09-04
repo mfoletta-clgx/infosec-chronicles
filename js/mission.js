@@ -6,6 +6,7 @@
 
   const THEME_HINTS = [
     ['boat', /boat|trawler|charter|deck|deep ?sea|marlin|tuna|reel|fishing rod|angler|offshore|yacht|vessel/i],
+    ['themepark', /theme ?park|amusement|disney|magic kingdom|roller ?coaster|churro|fast ?pass|turnstile|park hopper|six flags|carnival|fair ?ground|teacups|ferris/i],
     ['beach', /beach|hawaii|maui|island|ocean|surf|tiki|shore|sand|snorkel|coast|tropical|vacation|cruise|sea|aloha|luau/i],
     ['snow', /snow|ski|alaska|winter|frozen|ice|blizzard|sled|arctic|holiday|christmas|tahoe|aspen/i],
     ['forest', /forest|camp|hik|trail|woods|park|cabin|trees|nature|mountain trail|scout/i],
@@ -17,6 +18,7 @@
   ];
 
   const ITEM_WORDS = [
+    ['router', /\brogue (?:router|hotspot|ap)|evil ?twin|hotspot|access point|rogue wi-?fi\b/i],
     ['yubikey', /\byubikey|yubi key|security key|hardware key\b/i],
     ['key', /\b(?:decryptor |encryption |api |ssh |private |gpg |master )?key\b/i],
     ['token', /\b(?:2fa |mfa |api |auth |session |bearer |hardware )?token\b/i],
@@ -36,7 +38,7 @@
     laptop: 'the abandoned laptop', usb: 'the mystery USB drive', certificate: 'the expired certificate',
     phone: 'the buzzing phone', disk: 'the backup tape', password: 'the sticky note password',
     coffee: 'the emergency coffee', log: 'the smoking-gun log file', yubikey: 'the YubiKey',
-    rod: 'the fishing rod', artifact: 'the missing artifact'
+    rod: 'the fishing rod', router: 'the rogue hotspot', artifact: 'the missing artifact'
   };
 
   // -------------------------------------------------------------- item pixels
@@ -101,6 +103,12 @@
         px(9, 3, 1, 9, '#f2f2ef'); px(9, 11, 3, 1, '#f2f2ef');
         px(11, 10, 2, 3, '#4bd0c8');
         break;
+      case 'router':
+        px(3, 8, 10, 6, '#2b2740'); px(4, 9, 8, 4, '#3c3849');
+        px(4, 3, 1, 6, '#8d8794'); px(11, 3, 1, 6, '#8d8794');
+        px(5, 10, 1, 1, '#4bd07a'); px(7, 10, 1, 1, '#e0553f'); px(9, 10, 1, 1, '#e0553f');
+        px(6, 1, 4, 1, 'rgba(224,85,63,0.75)'); px(5, 0, 6, 1, 'rgba(224,85,63,0.45)');
+        break;
       default:
         px(4, 4, 8, 8, '#e8c94a'); px(6, 6, 4, 4, '#f7e07a');
     }
@@ -154,6 +162,12 @@
   const DECK_CANDIDATES = [
     { c: 5, r: 6 }, { c: 13, r: 8 }, { c: 6, r: 9 }, { c: 12, r: 6 }, { c: 9, r: 11 }, { c: 14, r: 5 }
   ];
+  // Clear of the carousel and the entrance sign.
+  const PARK_CANDIDATES = [
+    { c: 14, r: 4 }, { c: 6, r: 9 }, { c: 16, r: 8 }, { c: 9, r: 6 },
+    { c: 4, r: 11 }, { c: 17, r: 11 }, { c: 12, r: 10 }, { c: 7, r: 12 }
+  ];
+  const THEME_SPOTS = { boat: DECK_CANDIDATES, themepark: PARK_CANDIDATES };
 
   function shuffled(list, rnd) {
     const a = list.slice();
@@ -202,7 +216,7 @@
     }
 
     const onBoat = themeName === 'boat';
-    const spots = shuffled(onBoat ? DECK_CANDIDATES : CANDIDATES, rnd);
+    const spots = shuffled(THEME_SPOTS[themeName] || CANDIDATES, rnd);
     const hero = onBoat ? { c: 9, r: 8 } : { c: 10, r: 12 };
     const reserved = [hero];
     const npcs = npcOrder.slice(0, 5).map((name, i) => {

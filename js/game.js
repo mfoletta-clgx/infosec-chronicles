@@ -572,7 +572,7 @@
     else if (state.mode === 'fishing') step = 'Hold Space / A to reel him in!';
     else if (m.finale === 'fishing' && state.itemVisible) step = 'Get to the rod at the stern rail.';
     else if (state.itemVisible) step = 'Find ' + m.item.label + ' (it is glinting).';
-    else step = 'Talk to the team: ' + state.talkedCount + '/' + total;
+    else step = 'Talk to everyone here: ' + state.talkedCount + '/' + total;
     el('hud-step').textContent = step;
     el('hud-place').textContent = m.themeLabel;
   }

@@ -13,7 +13,7 @@
     beach: {
       label: 'Sun-Baked Shoreline',
       ground: '#e8d3a0', groundAlt: '#dbc389', edge: '#3fa6d1', edgeAlt: '#2b7fb0',
-      sky: '#7fd3f0', props: ['palm', 'rock', 'umbrella', 'crate', 'tiki'], edgeRows: 2
+      sky: '#7fd3f0', props: ['palm', 'rock', 'umbrella', 'crate', 'tiki'], edgeRows: 2, shore: true
     },
     office: {
       label: 'Fluorescent Fortress',
@@ -54,6 +54,17 @@
       label: 'The Open Water',
       ground: '#c99a63', groundAlt: '#b3874f', edge: '#2b7fb0', edgeAlt: '#1f6a97',
       sky: '#2b7fb0', props: ['cooler', 'crate', 'bucket'], edgeRows: 0, custom: 'boat'
+    },
+    themepark: {
+      label: 'The Happiest Attack Surface On Earth',
+      ground: '#c3b39a', groundAlt: '#b0a087', edge: '#8fa6c4', edgeAlt: '#7c92ae',
+      sky: '#7fd3f0', props: ['topiary', 'churrocart', 'balloons', 'queuepost', 'trashcan', 'ridesign', 'lamppost'],
+      edgeRows: 2, castle: true, density: 30,
+      signText: 'DISNEY-LAND',
+      fixed: [
+        { c: 2, r: 3, w: 4, h: 4, name: 'carousel' },
+        { c: 8, r: 2, w: 6, h: 2, name: 'parksign' }
+      ]
     }
   };
 
@@ -177,6 +188,42 @@
         px(3, 3, 10, 10, '#f2f2ef'); px(5, 5, 6, 6, '#2b7fb0');
         px(3, 3, 4, 3, '#e0553f'); px(9, 10, 4, 3, '#e0553f');
         break;
+      case 'topiary':
+        px(7, 11, 2, 5, '#6b4a2a'); px(5, 14, 6, 2, '#8a6b4a');
+        px(3, 3, 10, 9, '#2f7a38'); px(4, 1, 8, 4, '#3f9c4a'); px(5, 3, 4, 3, '#4bb058');
+        px(4, 9, 3, 2, '#276a30'); px(10, 6, 2, 2, '#4bb058');
+        break;
+      case 'churrocart':
+        px(1, 7, 14, 7, '#c99a63'); px(1, 7, 14, 2, '#a5713f');
+        px(0, 1, 16, 4, '#e0553f');
+        for (let i = 0; i < 4; i++) px(1 + i * 4, 1, 2, 4, '#f2f2ef');
+        px(3, 5, 1, 3, '#8d8794'); px(12, 5, 1, 3, '#8d8794');
+        px(3, 14, 3, 2, '#3a3a42'); px(10, 14, 3, 2, '#3a3a42');
+        px(6, 9, 5, 2, '#d9a531');
+        break;
+      case 'balloons':
+        px(2, 1, 4, 5, '#c94a36'); px(7, 0, 4, 5, '#e8c94a'); px(11, 2, 4, 5, '#4b8fd0');
+        px(3, 1, 2, 2, '#e0705a'); px(8, 0, 2, 2, '#f7e07a'); px(12, 2, 2, 2, '#7fc4f0');
+        px(4, 6, 1, 6, '#f2f2ef'); px(8, 5, 1, 7, '#f2f2ef'); px(12, 7, 1, 5, '#f2f2ef');
+        px(6, 11, 5, 5, '#8d8794');
+        break;
+      case 'queuepost':
+        px(6, 3, 4, 3, '#d9a531'); px(7, 5, 2, 9, '#b9b4c4');
+        px(5, 14, 6, 2, '#8d8794'); px(0, 6, 6, 2, '#c94a36'); px(10, 6, 6, 2, '#c94a36');
+        break;
+      case 'trashcan':
+        px(3, 4, 10, 11, '#2f7a38'); px(2, 2, 12, 3, '#276a30');
+        px(6, 3, 4, 1, '#14401c'); px(5, 7, 1, 6, '#4bb058'); px(10, 7, 1, 6, '#4bb058');
+        break;
+      case 'ridesign':
+        px(7, 8, 2, 8, '#8a6b4a'); px(5, 15, 6, 1, '#6b4a2a');
+        px(1, 1, 14, 7, '#4b8fd0'); px(2, 2, 12, 5, '#7fc4f0');
+        px(3, 3, 8, 1, '#22345e'); px(3, 5, 5, 1, '#22345e'); px(11, 3, 2, 3, '#e8c94a');
+        break;
+      case 'lamppost':
+        px(7, 4, 2, 11, '#3a3a42'); px(5, 15, 6, 1, '#2b2b30');
+        px(5, 1, 6, 4, '#f7e07a'); px(6, 0, 4, 2, '#3a3a42'); px(6, 2, 4, 2, '#fff7c9');
+        break;
       default:
         px(3, 3, 10, 10, '#8d8794');
     }
@@ -220,9 +267,18 @@
 
     const isReserved = (c, r) => (reserved || []).some(p => Math.abs(p.c - c) <= 1 && Math.abs(p.r - r) <= 1);
 
+    // landmark footprints are blocked out before anything else is scattered
+    (theme.fixed || []).forEach(f => {
+      for (let r = f.r; r < f.r + f.h; r++) {
+        for (let c = f.c; c < f.c + f.w; c++) {
+          if (r > 0 && c > 0 && r < ROWS - 1 && c < COLS - 1) solid[r][c] = true;
+        }
+      }
+    });
+
     // scatter props
     const inner = { c0: 1, c1: COLS - 1, r0: Math.max(1, theme.edgeRows), r1: ROWS - 1 };
-    const count = 26 + Math.floor(rnd() * 8);
+    const count = (theme.density || 26) + Math.floor(rnd() * 8);
     for (let i = 0; i < count; i++) {
       const c = inner.c0 + Math.floor(rnd() * (inner.c1 - inner.c0));
       const r = inner.r0 + Math.floor(rnd() * (inner.r1 - inner.r0));
@@ -380,7 +436,7 @@
       }
     }
     // shoreline highlight
-    if (th.edgeRows > 0) {
+    if (th.shore) {
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
       for (let c = 0; c < COLS; c++) ctx.fillRect(c * T, th.edgeRows * T - 2, T - Math.floor(rnd() * 5), 2);
     }
@@ -391,12 +447,149 @@
     ctx.fillStyle = shade(th.edge, 0.12);
     for (let c = 0; c < COLS; c++) ctx.fillRect(c * T, H - T, T, 3);
 
+    if (th.castle) paintPark(ctx, th, rnd);
+
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (map.props[r][c]) drawProp(ctx, map.props[r][c], c * T, r * T, rnd);
       }
     }
     return canvas;
+  }
+
+  // 3x5 pixel font, just enough for signage.
+  const FONT = {
+    A: '111101111101101', B: '110101110101110', C: '111100100100111', D: '110101101101110',
+    E: '111100110100111', F: '111100110100100', G: '111100101101111', H: '101101111101101',
+    I: '111010010010111', J: '001001001101111', K: '101101110101101', L: '100100100100111',
+    M: '101111111101101', N: '110101101101101', O: '111101101101111', P: '111101111100100',
+    Q: '111101101111001', R: '111101111110101', S: '111100111001111', T: '111010010010010',
+    U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101',
+    Y: '101101010010010', Z: '111001010100111', ' ': '000000000000000', '!': '010010010000010',
+    '.': '000000000000010', "'": '010010000000000', '-': '000000111000000'
+  };
+
+  function textWidth(text, scale) { return text.length * 4 * scale - scale; }
+
+  function drawText(ctx, text, x, y, scale, color) {
+    ctx.fillStyle = color;
+    let cx = x;
+    for (const ch of String(text).toUpperCase()) {
+      const glyph = FONT[ch];
+      if (glyph) {
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 3; c++) {
+            if (glyph[r * 3 + c] === '1') ctx.fillRect(cx + c * scale, y + r * scale, scale, scale);
+          }
+        }
+      }
+      cx += 4 * scale;
+    }
+  }
+
+  function paintPark(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;   // 32px of skyline across the top
+
+    fill(0, 0, W, band, '#7fd3f0');
+    for (let i = 0; i < 14; i++) fill(Math.floor(rnd() * W), Math.floor(rnd() * 14), 6 + Math.floor(rnd() * 8), 2, '#a8e4f7');
+
+    const stone = '#c9d4e4', stoneD = '#9fb0c8', roof = '#c94a36', roofD = '#a53a29';
+    // castle wall with battlements
+    fill(0, 18, W, band - 18, stone);
+    fill(0, band - 4, W, 4, stoneD);
+    for (let x = 0; x < W; x += 8) fill(x, 14, 5, 5, stone);
+
+    // towers
+    [24, 96, 176, 248, 296].forEach((tx, i) => {
+      const tw = i % 2 ? 18 : 22;
+      const ty = i % 2 ? 6 : 0;
+      fill(tx, ty + 10, tw, band - ty - 10, stone);
+      fill(tx, ty + 10, 3, band - ty - 10, stoneD);
+      for (let y = ty + 14; y < band; y += 8) fill(tx + 4, y, tw - 8, 2, stoneD);
+      // conical roof
+      for (let r = 0; r < 8; r++) {
+        const w = Math.max(2, tw - r * 2 - 2);
+        fill(tx + Math.round((tw - w) / 2), ty + 10 - r, w, 1, r > 4 ? roofD : roof);
+      }
+      fill(tx + Math.round(tw / 2) - 1, ty, 2, 3, '#e8c94a');
+    });
+
+    // gate
+    fill(140, 16, 40, band - 16, stoneD);
+    fill(146, 22, 28, band - 22, '#5a4a3a');
+    fill(150, 26, 20, band - 26, '#3a2f26');
+
+    // paved plaza joints
+    ctx.fillStyle = 'rgba(120,104,84,0.35)';
+    for (let y = band + T; y < H - T; y += T) ctx.fillRect(T, y, W - T * 2, 1);
+    for (let x = T; x < W - T; x += T) ctx.fillRect(x, band, 1, H - T - band);
+
+    (th.fixed || []).forEach(f => {
+      if (f.name === 'carousel') drawCarousel(ctx, f.c * T, f.r * T, f.w * T, f.h * T);
+      if (f.name === 'parksign') drawParkSign(ctx, f.c * T, f.r * T, f.w * T, f.h * T, th.signText || 'PARK');
+    });
+  }
+
+  function drawCarousel(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    const cx = w / 2;
+    const roofH = 22;
+
+    fill(4, h - 16, w - 8, 14, '#8fa6c4');            // platform
+    fill(4, h - 16, w - 8, 3, '#c9d4e4');
+    fill(6, h - 4, w - 12, 3, '#6f7f96');
+
+    // striped conical roof
+    for (let r = 0; r < roofH; r++) {
+      const ww = Math.max(4, Math.round(w * (r / roofH)));
+      const ax = Math.round(cx - ww / 2);
+      for (let i = 0; i < ww; i++) {
+        ctx.fillStyle = (Math.floor((i + r) / 4) % 2) ? '#e0553f' : '#f7f2ea';
+        ctx.fillRect(x + ax + i, y + 6 + r, 1, 1);
+      }
+    }
+    fill(Math.round(cx) - 1, 1, 3, 6, '#e8c94a');      // finial
+    fill(Math.round(cx) - 3, 0, 7, 2, '#f7e07a');
+    for (let i = 4; i < w - 4; i += 6) fill(i, 6 + roofH, 4, 2, '#e8c94a');   // canopy lights
+
+    // poles and riders
+    const poles = [10, Math.round(cx) - 2, w - 14];
+    poles.forEach((px2, i) => {
+      fill(px2, 6 + roofH, 2, h - 22 - roofH, '#e8c94a');
+      const hy = 8 + roofH + (i === 1 ? 6 : 0);
+      const coat = i === 1 ? '#f7f2ea' : (i ? '#c9a06a' : '#8a5a33');
+      fill(px2 - 5, hy + 4, 11, 6, coat);             // body
+      fill(px2 + 4, hy, 5, 6, coat);                  // head
+      fill(px2 + 7, hy + 2, 2, 2, '#3a2b33');         // muzzle
+      fill(px2 + 3, hy - 2, 2, 3, '#e0553f');         // ear/plume
+      fill(px2 - 5, hy + 10, 2, 5, coat);
+      fill(px2 + 3, hy + 10, 2, 5, coat);
+      fill(px2 - 6, hy + 4, 3, 3, '#c94a36');         // saddle
+    });
+  }
+
+  function drawParkSign(ctx, x, y, w, h, text) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+
+    fill(4, 10, 4, h - 10, '#6f5a44');                 // posts
+    fill(w - 8, 10, 4, h - 10, '#6f5a44');
+    fill(2, h - 4, 8, 4, '#4f4030');
+    fill(w - 10, h - 4, 8, 4, '#4f4030');
+
+    fill(2, 2, w - 4, h - 12, '#2f6a9c');              // board
+    fill(4, 4, w - 8, h - 16, '#4b8fd0');
+    fill(2, 2, w - 4, 2, '#7fc4f0');
+
+    const scale = 2;
+    const tw = textWidth(text, scale);
+    drawText(ctx, text, Math.round(x + (w - tw) / 2), y + Math.round((h - 12 - 10) / 2) + 3, scale, '#fff7c9');
+
+    // marquee bulbs
+    for (let i = 4; i < w - 6; i += 6) {
+      fill(i, 0, 2, 2, '#f7e07a');
+      fill(i, h - 12, 2, 2, '#f7e07a');
+    }
   }
 
   function isSolidPixel(map, x, y) {
