@@ -64,7 +64,7 @@
       id: 'jessica', name: 'Jessica', role: 'human', pronouns: 'she/her',
       title: 'Information Security',
       appearance: Appearance.human({
-        skin: '#c08850', hair: '#241d29', longHair: true,
+        skin: '#c08850', hair: '#241d29', longHair: true, ears: '#c94a36', earBand: '#c94a36',
         shirt: '#2a9c9c', pants: '#38405c', shoes: '#2c2436'
       })
     }

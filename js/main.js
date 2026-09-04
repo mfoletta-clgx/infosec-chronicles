@@ -297,10 +297,12 @@
       $('c-pants').value = a.pants;
       $('c-shoes').value = a.shoes;
       $('c-hat').value = a.hat || '#c4453c';
+      $('c-ears').value = a.ears || '#241d29';
       $('t-long').checked = !!a.longHair;
       $('t-glasses').checked = !!a.glasses;
       $('t-beard').checked = !!a.beard;
       $('t-hat').checked = !!a.hat;
+      $('t-ears').checked = !!a.ears;
     }
   }
 
@@ -324,6 +326,7 @@
       pants: $('c-pants').value,
       shoes: $('c-shoes').value,
       hat: $('t-hat').checked ? $('c-hat').value : null,
+      ears: $('t-ears').checked ? $('c-ears').value : null,
       longHair: $('t-long').checked,
       glasses: $('t-glasses').checked,
       beard: $('t-beard').checked

@@ -34,6 +34,8 @@
     pants: '#38405c',
     shoes: '#2c2436',
     hat: null,
+    ears: null,
+    earBand: '#c94a36',
     glasses: false,
     beard: false,
     longHair: false
@@ -131,6 +133,13 @@
     if (hatColor) a.hat = hatColor;
     else if (/\bhat\b|\bcap\b|\bbeanie\b|\bvisor\b/.test(t)) a.hat = '#c4453c';
     if (/\bno hat\b/.test(t)) a.hat = null;
+
+    const earColor = colorBefore(t, 'ears|ear hat|mouse ears');
+    if (earColor) a.ears = earColor;
+    else if (/\bmouse ears\b|\bmickey ears\b|\bdisney ears\b|\bear hat\b|\bears\b/.test(t)) a.ears = '#241d29';
+    if (/\bno ears\b/.test(t)) a.ears = null;
+    const bandColor = colorBefore(t, 'band|headband|bow');
+    if (bandColor) a.earBand = bandColor;
     if (/\bblue eyes\b/.test(t)) a.eye = '#2f6fb5';
     if (/\bgreen eyes\b/.test(t)) a.eye = '#2f7a45';
     if (/\bhazel eyes\b/.test(t)) a.eye = '#6b4a20';

@@ -144,6 +144,19 @@
       }
     }
 
+    // ---- mouse ears on a headband
+    if (a.ears) {
+      const ear = a.ears, band = a.earBand || '#c94a36', lit = shade(ear, 0.3);
+      const ey = hy - 2;
+      px(ctx, 1, ey, 2, 1, ear);
+      px(ctx, 0, ey + 1, 3, 2, ear);
+      px(ctx, 1, ey + 1, 1, 1, lit);
+      px(ctx, 13, ey, 2, 1, ear);
+      px(ctx, 13, ey + 1, 3, 2, ear);
+      px(ctx, 14, ey + 1, 1, 1, lit);
+      px(ctx, 3, ey + 2, 10, 1, band);
+    }
+
     // ---- hat
     if (a.hat) {
       const hc = a.hat, hd = shade(hc, -0.3);

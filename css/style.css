@@ -100,20 +100,21 @@ h1, h2, h3 { font-weight: 700; letter-spacing: 0.5px; margin: 0 0 8px; }
 .grow { flex: 1; }
 
 /* -------------------------------------------------------------------- episodes */
-.episode-list { display: grid; gap: 10px; }
+/* minmax(0,1fr) stops long objective text from widening the track past the panel */
+.episode-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .episode {
   display: flex; gap: 12px; align-items: center;
   background: var(--panel-2); border: 2px solid var(--line); border-radius: 3px;
-  padding: 10px 12px; cursor: pointer; text-align: left; width: 100%;
+  padding: 10px 12px; cursor: pointer; text-align: left; width: 100%; min-width: 0;
   font: inherit; color: inherit;
 }
 .episode:hover { border-color: var(--accent); }
 .episode canvas { image-rendering: pixelated; flex: 0 0 auto; }
-.episode .meta { flex: 1; min-width: 0; }
-.episode .name { font-weight: 700; font-size: 14px; }
+.episode .meta { flex: 1 1 auto; min-width: 0; }
+.episode .name { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .episode .sub { color: var(--ink-dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.episode .done { color: var(--accent-2); font-size: 11px; white-space: nowrap; }
-.episode .remove { padding: 2px 7px; font-size: 14px; line-height: 1; }
+.episode .done { color: var(--accent-2); font-size: 11px; white-space: nowrap; flex: 0 0 auto; }
+.episode .remove { padding: 2px 7px; font-size: 14px; line-height: 1; flex: 0 0 auto; }
 
 /* ------------------------------------------------------------------- briefing */
 .cast-strip { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
