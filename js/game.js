@@ -35,6 +35,15 @@
       talkedCount: 0,
       holding: false,
       fishing: null,
+      chickens: (mission.chickens || []).map(c => ({
+        name: c.name, look: c.look, speed: c.speed,
+        x: c.x, y: c.y, dir: 'left', frame: 0, anim: 0,
+        vx: 0, vy: 0, wander: 0, stam: 100, tired: 0, caught: false, bawk: 0
+      })),
+      caughtCount: 0,
+      melon: null,
+      melonCooldown: 0,
+      puffs: [],
       dialogueQueue: [],
       dialogueSpeaker: null,
       typed: 0,
@@ -52,7 +61,7 @@
     };
 
     bindInput();
-    if (!mission.npcs.length) state.itemVisible = true;
+    if (!mission.npcs.length && mission.finale !== 'chickens') state.itemVisible = true;
     renderHud();
     if (mission.petLines.length) queueDialogue(mission.pet, mission.petLook, [mission.petLines[0]]);
     else if (mission.introLines.length) queueDialogue(mission.hero, mission.heroLook, mission.introLines);
@@ -198,6 +207,11 @@
       const d = Math.hypot(n.x + 8 - f.x, n.y + 10 - f.y);
       if (d < 14 && (!best || d < best.d)) best = { d, type: 'npc', npc: n };
     }
+    for (const ch of state.chickens) {
+      if (ch.caught) continue;
+      const d = Math.hypot(ch.x + 8 - f.x, ch.y + 10 - f.y);
+      if (d < 17 && (!best || d < best.d)) best = { d, type: 'chicken', chicken: ch };
+    }
     if (state.itemVisible && !state.itemTaken) {
       const it = state.mission.item;
       const d = Math.hypot(it.x + 8 - f.x, it.y + 8 - f.y);
@@ -213,6 +227,7 @@
     const target = nearestTarget();
     if (!target) return;
     if (target.type === 'npc') talkTo(target.npc);
+    else if (target.type === 'chicken') catchChicken(target.chicken);
     else takeItem();
   }
 
@@ -230,6 +245,173 @@
     }
     queueDialogue(npc.name, npc.look, lines);
     renderHud();
+  }
+
+  // --------------------------------------------------------------- chickens
+  const FLEE_RADIUS = 54;
+  const MELON_RADIUS = 118;
+  const MELON_TIME = 6200;
+  const MELON_COOLDOWN = 10000;
+
+  function chickenFree(x, y) {
+    const b = feetBox(x, y);
+    return !World.isSolidPixel(state.map, b.x0, b.y0) && !World.isSolidPixel(state.map, b.x1 - 1, b.y0) &&
+      !World.isSolidPixel(state.map, b.x0, b.y1 - 1) && !World.isSolidPixel(state.map, b.x1 - 1, b.y1 - 1);
+  }
+
+  function updateChickens(dt, now) {
+    const melon = state.melon && now < state.melon.until ? state.melon : null;
+    for (const ch of state.chickens) {
+      if (ch.caught) { ch.frame = 0; continue; }
+      const dx = ch.x - state.player.x, dy = ch.y - state.player.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const fd = melon ? Math.hypot(ch.x - melon.x, ch.y - melon.y) : Infinity;
+      let sx = 0, sy = 0, sp = ch.speed;
+
+      if (melon && fd < MELON_RADIUS && dist > 22) {
+        // watermelon beats fear
+        if (fd > 7) { sx = (melon.x - ch.x) / fd; sy = (melon.y - ch.y) / fd; sp *= 0.75; }
+        ch.stam = Math.min(100, ch.stam + 0.03 * dt);
+      } else if (dist < FLEE_RADIUS) {
+        sx = dx / dist; sy = dy / dist; sp *= 1.28;
+        ch.stam -= 0.045 * dt;
+        if (ch.stam <= 0) { ch.tired = 2200; ch.stam = 55; ch.bawk = 900; }
+      } else {
+        ch.wander -= dt;
+        if (ch.wander <= 0) {
+          ch.wander = 500 + Math.random() * 900;
+          const ang = Math.random() * Math.PI * 2;
+          const idle = Math.random() < 0.3;
+          ch.vx = idle ? 0 : Math.cos(ang);
+          ch.vy = idle ? 0 : Math.sin(ang);
+        }
+        sx = ch.vx; sy = ch.vy; sp *= 0.45;
+        ch.stam = Math.min(100, ch.stam + 0.02 * dt);
+      }
+
+      if (ch.tired > 0) { ch.tired -= dt; sp *= 0.45; }
+      if (ch.bawk > 0) ch.bawk -= dt;
+
+      const step = sp * (dt / 16.666);
+      const nx = ch.x + sx * step, ny = ch.y + sy * step;
+      if (chickenFree(nx, ch.y)) ch.x = nx; else ch.vx = -ch.vx;
+      if (chickenFree(ch.x, ny)) ch.y = ny; else ch.vy = -ch.vy;
+      ch.x = Math.max(T, Math.min(World.W - T * 2, ch.x));
+      ch.y = Math.max(T * 2, Math.min(World.H - T * 2, ch.y));
+
+      if (Math.abs(sx) > 0.04 || Math.abs(sy) > 0.04) {
+        ch.dir = Math.abs(sx) > Math.abs(sy) ? (sx < 0 ? 'left' : 'right') : (sy < 0 ? 'up' : 'down');
+        ch.anim += dt;
+        ch.frame = Math.floor(ch.anim / 100) % 4;
+      } else ch.frame = 0;
+    }
+
+    // feather puffs
+    for (let i = state.puffs.length - 1; i >= 0; i--) {
+      const p = state.puffs[i];
+      p.x += p.vx * (dt / 16.666);
+      p.y += p.vy * (dt / 16.666);
+      p.vy += 0.02 * (dt / 16.666);
+      p.life -= dt;
+      if (p.life <= 0) state.puffs.splice(i, 1);
+    }
+  }
+
+  function catchChicken(ch) {
+    ch.caught = true;
+    state.caughtCount++;
+    for (let i = 0; i < 10; i++) {
+      state.puffs.push({
+        x: ch.x + 8, y: ch.y + 8,
+        vx: (Math.random() - 0.5) * 2.6,
+        vy: -Math.random() * 1.8 - 0.3,
+        life: 700 + Math.random() * 500,
+        color: i % 3 === 0 ? '#f2f2ef' : (ch.look.coat || '#f2f2ef')
+      });
+    }
+    const total = state.chickens.length;
+    renderHud();
+    if (state.caughtCount >= total) {
+      state.itemTaken = true;
+      queueDialogue(state.mission.hero, state.mission.heroLook, [
+        'Got it. All ' + total + ' waivers recovered, only lightly chewed.',
+        state.mission.trivia ? 'Now, while the paperwork is still damp...' : 'Back to the office.'
+      ], () => finishAfterItem());
+    } else {
+      toast('Waiver recovered from ' + ch.name + '! ' + state.caughtCount + '/' + total);
+    }
+  }
+
+  function putOutMelon() {
+    const now = performance.now();
+    if (now < state.melonCooldown) {
+      toast('No watermelon left for ' + Math.ceil((state.melonCooldown - now) / 1000) + 's.');
+      return;
+    }
+    state.melon = { x: state.player.x + 8, y: state.player.y + 13, until: now + MELON_TIME, born: now };
+    state.melonCooldown = now + MELON_COOLDOWN;
+    toast('You set out a watermelon. The flock loses all composure.');
+  }
+
+  /** Scanline ellipse, so the melon stays crisp at this resolution. */
+  function ovalRows(ctx, cx, cy, rx, ry, color) {
+    ctx.fillStyle = color;
+    for (let dy = -ry; dy <= ry; dy++) {
+      const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry))));
+      if (w > 0) ctx.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2, 1);
+    }
+  }
+
+  function drawMelon(ctx, now) {
+    if (!state.melon || now > state.melon.until) return;
+    const m = state.melon;
+    const left = (m.until - now) / MELON_TIME;
+    const eaten = 0.55 + left * 0.45;          // pecked down as it goes
+    const cx = Math.round(m.x), cy = Math.round(m.y);
+
+    ctx.globalAlpha = Math.min(1, left * 6);
+    ctx.fillStyle = 'rgba(20,12,30,0.22)';
+    ctx.fillRect(cx - 8, cy + 3, 16, 2);
+    ovalRows(ctx, cx, cy, 8 * eaten, 5 * eaten, '#2f6a38');
+    ovalRows(ctx, cx, cy, 7 * eaten, 4 * eaten, '#9ed17e');
+    ovalRows(ctx, cx, cy, 6 * eaten, 3 * eaten, '#e0553f');
+    ctx.fillStyle = '#f0705a';
+    ctx.fillRect(cx - 3, cy - 2, 3, 1);
+    ctx.fillStyle = '#241d29';
+    [[-3, 0], [1, -1], [2, 1], [-1, 1]].forEach(([sx, sy]) => {
+      if (eaten > 0.7 || sx > 0) ctx.fillRect(cx + sx, cy + sy, 1, 1);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPuffs(ctx) {
+    for (const p of state.puffs) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life / 500));
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawChicken(ctx, ch) {
+    ctx.fillStyle = 'rgba(20,12,30,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(ch.x + 8, ch.y + 15, 5, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    Sprites.draw(ctx, ch.look, ch.x, ch.y, ch.dir, ch.frame);
+    if (!ch.caught) {
+      // the stolen waiver, clamped in the beak
+      const facingLeft = ch.dir === 'left';
+      const wx = Math.round(ch.x + (facingLeft ? 1 : 11));
+      const wy = Math.round(ch.y + 6);
+      ctx.fillStyle = '#1a1220';
+      ctx.fillRect(wx - 1, wy - 1, 6, 5);
+      ctx.fillStyle = '#f7f2ea';
+      ctx.fillRect(wx, wy, 4, 3);
+      ctx.fillStyle = '#9a94a8';
+      ctx.fillRect(wx, wy + 1, 3, 1);
+      if (ch.bawk > 0) drawMark(ctx, ch.x + 8, ch.y - 4, 'bang');
+    }
   }
 
   function takeItem() {
@@ -420,7 +602,9 @@
   }
 
   function useCompanion() {
-    if (!state || state.mode !== 'roam' || !state.pet) return;
+    if (!state || state.mode !== 'roam') return;
+    if (state.mission.finale === 'chickens') { putOutMelon(); return; }
+    if (!state.pet) return;
     const it = state.mission.item;
     const p = state.player;
     const d = Math.hypot(it.x - p.x, it.y - p.y);
@@ -569,6 +753,7 @@
     const total = m.npcs.length;
     let step;
     if (state.itemTaken) step = m.trivia ? 'Answer the riddle to close the ticket.' : 'Head home, hero.';
+    else if (state.chickens.length) step = 'Waivers recovered: ' + state.caughtCount + '/' + state.chickens.length + '  \u00b7  B = put out watermelon';
     else if (state.mode === 'fishing') step = 'Hold Space / A to reel him in!';
     else if (m.finale === 'fishing' && state.itemVisible) step = 'Get to the rod at the stern rail.';
     else if (state.itemVisible) step = 'Find ' + m.item.label + ' (it is glinting).';
@@ -587,12 +772,14 @@
     if (state.itemVisible && !state.itemTaken) {
       Missions.drawItem(ctx, m.finale === 'fishing' ? 'rod' : m.item.kind, m.item.x, m.item.y, now);
     }
-
+    drawMelon(ctx, now);
     const actors = [];
     m.npcs.forEach(n => actors.push({ y: n.y, draw: () => drawActor(ctx, n.look, n.x, n.y, n.dir, 0, n.talked ? null : 'bang') }));
+    state.chickens.forEach(ch => actors.push({ y: ch.y, draw: () => drawChicken(ctx, ch) }));
     if (state.pet) actors.push({ y: state.pet.y, draw: () => drawActor(ctx, m.petLook, state.pet.x, state.pet.y, state.pet.dir, state.pet.frame, state.petBubble > 0 ? 'bark' : null) });
     actors.push({ y: state.player.y, draw: () => drawActor(ctx, m.heroLook, state.player.x, state.player.y, state.player.dir, state.player.frame, null) });
     actors.sort((a, b) => a.y - b.y).forEach(a => a.draw());
+    drawPuffs(ctx);
 
     // interaction prompt (rendered as crisp DOM text under the stage)
     let prompt = '';
@@ -600,6 +787,7 @@
       const target = nearestTarget();
       if (target) {
         if (target.type === 'npc') prompt = 'Talk to ' + target.npc.name;
+        else if (target.type === 'chicken') prompt = 'Grab the waiver from ' + target.chicken.name;
         else prompt = m.finale === 'fishing' ? 'Grab the rod and fight the fish' : 'Grab ' + m.item.label;
       }
     }
@@ -651,6 +839,7 @@
     state.last = now;
     if (state.mode === 'roam') { move(dt); followPet(dt); }
     else { state.player.frame = 0; }
+    if (state.chickens.length) updateChickens(state.mode === 'roam' ? dt : 0, now);
     if (state.mode === 'fishing') tickFishing(dt);
     if (state.petBubble > 0) state.petBubble -= dt;
     tickText(dt);

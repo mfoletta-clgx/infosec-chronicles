@@ -167,7 +167,12 @@
     { c: 14, r: 4 }, { c: 6, r: 9 }, { c: 16, r: 8 }, { c: 9, r: 6 },
     { c: 4, r: 11 }, { c: 17, r: 11 }, { c: 12, r: 10 }, { c: 7, r: 12 }
   ];
-  const THEME_SPOTS = { boat: DECK_CANDIDATES, themepark: PARK_CANDIDATES };
+  // Clear of the barn and the coop.
+  const FARM_CANDIDATES = [
+    { c: 10, r: 5 }, { c: 14, r: 8 }, { c: 5, r: 9 }, { c: 12, r: 11 },
+    { c: 8, r: 8 }, { c: 17, r: 7 }, { c: 3, r: 12 }, { c: 16, r: 11 }
+  ];
+  const THEME_SPOTS = { boat: DECK_CANDIDATES, themepark: PARK_CANDIDATES, farm: FARM_CANDIDATES };
 
   function shuffled(list, rnd) {
     const a = list.slice();
@@ -238,6 +243,23 @@
     const itemSpot = onBoat ? { c: 12, r: 11 } : (spots[npcs.length] || { c: 5, r: 8 });
     reserved.push(itemSpot);
 
+    const chickens = (m.chickens || []).slice(0, 5).map((c, i) => {
+      const spot = FARM_CANDIDATES[(i * 3 + 1) % FARM_CANDIDATES.length];
+      reserved.push(spot);
+      return {
+        name: c.name || ('Chicken ' + (i + 1)),
+        speed: c.speed || 0.6,
+        look: Appearance.pet({
+          species: 'chicken',
+          coat: c.coat || '#c9a06a',
+          accent: c.accent || Appearance.shade(c.coat || '#c9a06a', -0.18),
+          comb: c.comb || '#c94a36',
+          beak: c.beak || '#e8a531'
+        }),
+        c: spot.c, r: spot.r, x: spot.c * T, y: spot.r * T
+      };
+    });
+
     const triviaRaw = m.triviaRiddle !== undefined ? m.triviaRiddle
       : (m.trivia !== undefined ? m.trivia : m.riddle);
     const trivia = normalizeTrivia(triviaRaw, m);
@@ -261,6 +283,7 @@
       themeLabel: (World.THEMES[themeName] || {}).label || 'Somewhere Suspicious',
       npcs,
       finale: m.finale || null,
+      chickens,
       item: { kind: item.kind, label: item.label, c: itemSpot.c, r: itemSpot.r, x: itemSpot.c * T, y: itemSpot.r * T },
       heroSpawn: { x: hero.c * T, y: hero.r * T },
       reserved,

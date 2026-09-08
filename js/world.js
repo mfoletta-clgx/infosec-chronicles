@@ -59,11 +59,21 @@
       label: 'The Happiest Attack Surface On Earth',
       ground: '#c3b39a', groundAlt: '#b0a087', edge: '#8fa6c4', edgeAlt: '#7c92ae',
       sky: '#7fd3f0', props: ['topiary', 'churrocart', 'balloons', 'queuepost', 'trashcan', 'ridesign', 'lamppost'],
-      edgeRows: 2, castle: true, density: 30,
+      edgeRows: 2, extras: 'park', density: 30,
       signText: 'DISNEY-LAND',
       fixed: [
         { c: 2, r: 3, w: 4, h: 4, name: 'carousel' },
         { c: 8, r: 2, w: 6, h: 2, name: 'parksign' }
+      ]
+    },
+    farm: {
+      label: "Shane's Back Forty",
+      ground: '#6fa34a', groundAlt: '#5e8f3e', edge: '#8fc4e8', edgeAlt: '#7ab4dc',
+      sky: '#8fc4e8', props: ['haybale', 'fencepost', 'trough', 'feedbag', 'scarecrow', 'bush', 'eggbasket'],
+      edgeRows: 2, extras: 'farm', density: 22,
+      fixed: [
+        { c: 2, r: 2, w: 5, h: 3, name: 'barn' },
+        { c: 15, r: 3, w: 3, h: 2, name: 'coop' }
       ]
     }
   };
@@ -223,6 +233,37 @@
       case 'lamppost':
         px(7, 4, 2, 11, '#3a3a42'); px(5, 15, 6, 1, '#2b2b30');
         px(5, 1, 6, 4, '#f7e07a'); px(6, 0, 4, 2, '#3a3a42'); px(6, 2, 4, 2, '#fff7c9');
+        break;
+      case 'haybale':
+        px(1, 5, 14, 9, '#d9a531'); px(1, 5, 14, 2, '#e8c94a');
+        px(1, 12, 14, 2, '#b8862f');
+        px(4, 5, 1, 9, '#b8862f'); px(11, 5, 1, 9, '#b8862f');
+        px(2, 8, 12, 1, '#c4922c');
+        break;
+      case 'fencepost':
+        px(6, 2, 4, 14, '#a5713f'); px(6, 2, 4, 2, '#c08850');
+        px(0, 6, 16, 2, '#8a5a33'); px(0, 11, 16, 2, '#8a5a33');
+        break;
+      case 'trough':
+        px(1, 7, 14, 7, '#8a6b4a'); px(2, 8, 12, 4, '#4b8fd0');
+        px(2, 8, 12, 1, '#7fc4f0'); px(1, 13, 14, 2, '#6b5238');
+        break;
+      case 'feedbag':
+        px(3, 5, 10, 10, '#c9b48c'); px(3, 4, 10, 2, '#a89468');
+        px(5, 3, 6, 2, '#c9b48c'); px(5, 8, 6, 4, '#8a7a52');
+        px(6, 9, 1, 1, '#e8c94a'); px(9, 10, 1, 1, '#e8c94a');
+        break;
+      case 'scarecrow':
+        px(7, 6, 2, 10, '#8a5a33'); px(2, 8, 12, 2, '#8a5a33');
+        px(5, 1, 6, 6, '#d9a531'); px(4, 0, 8, 2, '#3a3a42');
+        px(3, 2, 10, 1, '#3a3a42');
+        px(6, 3, 1, 1, '#241d29'); px(9, 3, 1, 1, '#241d29'); px(7, 5, 2, 1, '#241d29');
+        px(4, 10, 8, 5, '#c94a36'); px(2, 10, 2, 3, '#e8c94a'); px(12, 10, 2, 3, '#e8c94a');
+        break;
+      case 'eggbasket':
+        px(2, 7, 12, 7, '#a5713f'); px(2, 7, 12, 2, '#c08850');
+        px(4, 5, 2, 3, '#8a5a33'); px(10, 5, 2, 3, '#8a5a33');
+        px(4, 6, 3, 2, '#f7f2ea'); px(8, 5, 3, 2, '#f7f2ea'); px(6, 4, 3, 2, '#f7f2ea');
         break;
       default:
         px(3, 3, 10, 10, '#8d8794');
@@ -447,7 +488,8 @@
     ctx.fillStyle = shade(th.edge, 0.12);
     for (let c = 0; c < COLS; c++) ctx.fillRect(c * T, H - T, T, 3);
 
-    if (th.castle) paintPark(ctx, th, rnd);
+    if (th.extras === 'park') paintPark(ctx, th, rnd);
+    else if (th.extras === 'farm') paintFarm(ctx, th, rnd);
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -590,6 +632,98 @@
       fill(i, 0, 2, 2, '#f7e07a');
       fill(i, h - 12, 2, 2, '#f7e07a');
     }
+  }
+
+  function paintFarm(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;
+
+    fill(0, 0, W, band, '#8fc4e8');
+    for (let i = 0; i < 12; i++) fill(Math.floor(rnd() * W), Math.floor(rnd() * 10), 7 + Math.floor(rnd() * 9), 2, '#c9e6f5');
+    // rolling hills
+    for (let x = 0; x < W; x++) {
+      const h = 7 + Math.round(Math.sin(x / 26) * 4 + Math.sin(x / 11) * 2);
+      fill(x, band - h, 1, h, '#4e7d3a');
+      fill(x, band - h, 1, 1, '#5e8f3e');
+    }
+    // pasture fence along the horizon
+    fill(0, band - 3, W, 2, '#a5713f');
+    fill(0, band + 2, W, 2, '#a5713f');
+    for (let x = 4; x < W; x += 22) fill(x, band - 5, 3, 11, '#8a5a33');
+
+    (th.fixed || []).forEach(f => {
+      if (f.name === 'barn') drawBarn(ctx, f.c * T, f.r * T, f.w * T, f.h * T);
+      if (f.name === 'coop') drawCoop(ctx, f.c * T, f.r * T, f.w * T, f.h * T);
+    });
+
+    // worn dirt patches around the yard
+    for (let i = 0; i < 40; i++) {
+      const x = T + Math.floor(rnd() * (W - T * 2));
+      const y = band + Math.floor(rnd() * (H - band - T));
+      fill(x, y, 3 + Math.floor(rnd() * 5), 2, 'rgba(150,122,74,0.30)');
+    }
+  }
+
+  function drawBarn(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    const red = '#b8392c', redD = '#8f2b21', trim = '#f2ece0';
+    const roofH = 18;
+
+    // gambrel roof
+    for (let r = 0; r < roofH; r++) {
+      const t = r / roofH;
+      const ww = Math.round(w * (t < 0.45 ? 0.30 + t * 1.1 : 0.80 + (t - 0.45) * 0.36));
+      fill(Math.round((w - ww) / 2), r, ww, 1, r < 3 ? '#6b241c' : redD);
+    }
+    fill(0, roofH - 2, w, 3, '#5a1f18');
+
+    fill(3, roofH, w - 6, h - roofH, red);
+    fill(3, roofH, w - 6, 2, '#cf4636');
+    fill(3, h - 3, w - 6, 3, '#7a2419');
+
+    // hayloft door
+    fill(Math.round(w / 2) - 6, roofH - 14, 12, 11, '#6b4a2a');
+    fill(Math.round(w / 2) - 5, roofH - 13, 10, 9, '#8a6b4a');
+
+    // main doors with white trim
+    const dw = 30, dx = Math.round(w / 2 - dw / 2), dy = h - 26;
+    fill(dx - 2, dy - 2, dw + 4, 28, trim);
+    fill(dx, dy, dw, 26, '#9c3327');
+    fill(dx + Math.round(dw / 2) - 1, dy, 2, 26, trim);
+    for (let i = 0; i < 2; i++) {
+      const ox = dx + i * (dw / 2);
+      fill(ox + 2, dy + 11, 11, 2, trim);
+      fill(ox + 2, dy + 3, 11, 2, trim);
+    }
+    fill(2, roofH, 3, h - roofH, trim);
+    fill(w - 5, roofH, 3, h - roofH, trim);
+
+    // weathervane
+    fill(Math.round(w / 2), -5, 1, 6, '#3a3a42');
+    fill(Math.round(w / 2) - 3, -5, 7, 1, '#3a3a42');
+    fill(Math.round(w / 2) + 1, -8, 4, 3, '#e8c94a');
+  }
+
+  function drawCoop(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 6, w, h - 6, '#c9a06a');
+    fill(0, 6, w, 2, '#e0bb84');
+    for (let i = 4; i < w; i += 6) fill(i, 8, 1, h - 10, '#a8834f');
+
+    // slanted roof
+    for (let r = 0; r < 8; r++) fill(Math.round(r * 0.6), 6 - r, w - Math.round(r * 1.1), 1, r < 2 ? '#5a4030' : '#6b4a2a');
+    fill(-1, 5, w + 2, 2, '#4f3826');
+
+    // pop hole and ramp
+    fill(6, h - 13, 9, 13, '#4a3524');
+    fill(7, h - 12, 7, 12, '#2f2118');
+    fill(14, h - 6, 12, 3, '#8a6b4a');
+    for (let i = 15; i < 26; i += 3) fill(i, h - 7, 2, 1, '#6b5238');
+
+    // wire window
+    fill(w - 16, 11, 12, 9, '#3a2f22');
+    for (let i = 0; i < 12; i += 3) fill(w - 16 + i, 11, 1, 9, '#8d8794');
+    for (let i = 0; i < 9; i += 3) fill(w - 16, 11 + i, 12, 1, '#8d8794');
   }
 
   function isSolidPixel(map, x, y) {

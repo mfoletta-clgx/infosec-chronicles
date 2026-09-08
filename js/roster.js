@@ -3,6 +3,7 @@
   'use strict';
 
   const KEY = 'infosec-chronicles.roster.v3';
+  const REMOVED_KEY = 'infosec-chronicles.roster.removed.v1';
   const hash = World.hashString;
   const rngOf = World.mulberry32;
 
@@ -67,21 +68,46 @@
         skin: '#c08850', hair: '#241d29', longHair: true, ears: '#c94a36', earBand: '#c94a36',
         shirt: '#2a9c9c', pants: '#38405c', shoes: '#2c2436'
       })
+    },
+    {
+      id: 'shane', name: 'Shane', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#8f8f99', shirt: '#8a4a3a', pants: '#4a5a6b', shoes: '#5a4030'
+      })
     }
   ];
 
   let cache = null;
 
+  function removedIds() {
+    try { return JSON.parse(localStorage.getItem(REMOVED_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
   function load() {
     if (cache) return cache;
+    let stored = null;
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) { cache = parsed; return cache; }
+        if (Array.isArray(parsed) && parsed.length) stored = parsed;
       }
     } catch (e) { /* corrupted storage falls back to defaults */ }
-    cache = DEFAULT_ROSTER.map(m => JSON.parse(JSON.stringify(m)));
+
+    if (!stored) {
+      cache = DEFAULT_ROSTER.map(m => JSON.parse(JSON.stringify(m)));
+      return cache;
+    }
+
+    // New cast shipped with later episodes still reaches people who already saved edits.
+    const have = new Set(stored.map(m => m.id));
+    const dropped = new Set(removedIds());
+    DEFAULT_ROSTER.forEach(d => {
+      if (!have.has(d.id) && !dropped.has(d.id)) stored.push(JSON.parse(JSON.stringify(d)));
+    });
+    cache = stored;
     return cache;
   }
 
@@ -135,12 +161,18 @@
   }
 
   function remove(id) {
+    const dropped = removedIds();
+    if (dropped.indexOf(id) < 0) dropped.push(id);
+    try { localStorage.setItem(REMOVED_KEY, JSON.stringify(dropped)); } catch (e) { /* ignore */ }
     save(load().filter(m => m.id !== id));
   }
 
   function reset() {
     cache = null;
-    try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    try {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(REMOVED_KEY);
+    } catch (e) { /* ignore */ }
     return load();
   }
 

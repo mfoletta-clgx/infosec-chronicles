@@ -457,6 +457,24 @@
       '................',
       '................',
       '................'
+    ],
+    chicken: [
+      '................',
+      '................',
+      '..........dd....',
+      '.........dddd...',
+      '.........bbbb...',
+      '........bbbbbb..',
+      '........bbbebnn.',
+      '.b......bbbbbnn.',
+      '.bbb...bbbbbbb..',
+      '.bbbbbbbbbbbbb..',
+      '..bbbaaabbbbb...',
+      '...bbaaaabbb....',
+      '....pp...pp.....',
+      '...ppp...ppp....',
+      '................',
+      '................'
     ]
   };
   PET_ART.bunny = PET_ART.rabbit;
@@ -468,7 +486,8 @@
   PET_ART.pony = PET_ART.horse;
 
   function drawPet(ctx, a, dir, frame) {
-    const art = PET_ART[String(a.species || 'dog').toLowerCase()] || PET_ART.dog;
+    const species = String(a.species || 'dog').toLowerCase();
+    const art = PET_ART[species] || PET_ART.dog;
     const pal = {
       b: a.coat,
       a: a.accent,
@@ -478,6 +497,12 @@
       p: '#e88fb8',
       w: '#f2f2ef'
     };
+    if (species === 'chicken') {
+      pal.d = a.comb || '#c94a36';       // comb
+      pal.n = a.beak || '#e8a531';       // beak
+      pal.p = a.beak || '#e8a531';       // legs
+      pal.e = '#1a1220';
+    }
     // Frame 1/3 hop: whole body up 1px and legs shifted.
     const hop = (frame === 1) ? -1 : (frame === 3) ? 1 : 0;
     for (let y = 0; y < S; y++) {

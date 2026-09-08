@@ -45,6 +45,28 @@
         hint: 'Encryption is the thing that matters. The signal strength, the name, and your browser tabs are all irrelevant to an attacker sitting in the middle.'
       },
       outro: 'Rogue hotspot unplugged, tourist safely on cellular data, and Jessica made it onto the teacups. Perfect day.'
+    },
+    {
+      missionId: 'ep-03-fowl-play',
+      title: 'Operation: Fowl Play',
+      hero: 'Shane',
+      objective: "Shane's chickens made off with the signed security waivers. Get all three back!",
+      theme: 'farm',
+      finale: 'chickens',
+      reward: 'Poultry In Motion',
+      chickens: [
+        { name: 'Marshmallow', coat: '#f4f1ea', accent: '#d8d2c4', speed: 0.60 },
+        { name: 'Hen Solo', coat: '#8a5a33', accent: '#6b4023', speed: 0.54 },
+        { name: 'Cluck Norris', coat: '#2f2b33', accent: '#4a4550', speed: 0.78 }
+      ],
+      dialogue: [
+        'Shane: The signed waivers were on the porch table. In a folder. Weighted down with a rock.',
+        'Shane: The rock is still there. The folder is not.',
+        'Shane: Marshmallow has one. Hen Solo has one. And Cluck Norris has the one Legal actually asked about twice.',
+        'Shane: Put out a watermelon with B \u2014 they will abandon anything for it. You are not out-running Cluck Norris on foot. Nobody out-runs Cluck Norris.'
+      ],
+
+      outro: 'Three waivers recovered, two only lightly chewed. Cluck Norris remains unrepentant and has been added to the risk register.'
     }
   ];
 })(window);
