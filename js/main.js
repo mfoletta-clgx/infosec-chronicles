@@ -160,7 +160,7 @@
     const cast = $('brief-cast');
     cast.innerHTML = '';
     const people = [{ name: m.hero + ' (you)', look: m.heroLook }]
-      .concat(m.pet ? [{ name: m.pet, look: m.petLook }] : [])
+      .concat((m.pets || []).map(p => ({ name: p.name, look: p.look })))
       .concat(m.npcs.map(n => ({ name: n.name, look: n.look })));
     people.forEach(p => {
       const chip = document.createElement('div');

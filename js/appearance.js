@@ -49,7 +49,9 @@
     accent: '#f2e3c8',
     eye: '#2b1d3a',
     nose: '#3a2b33',
-    paws: '#8c5b2f'
+    paws: '#8c5b2f',
+    collar: null,
+    headphones: null
   };
 
   function human(overrides) { return Object.assign({}, DEFAULT_HUMAN, overrides || {}); }

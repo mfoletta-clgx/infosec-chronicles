@@ -75,6 +75,18 @@
         { c: 2, r: 2, w: 5, h: 3, name: 'barn' },
         { c: 15, r: 3, w: 3, h: 2, name: 'coop' }
       ]
+    },
+    coophouse: {
+      label: 'Inside The Coop (Nicer Than Your Place)',
+      ground: '#b98a55', groundAlt: '#a87a48', edge: '#e8dfd0', edgeAlt: '#d6cab6',
+      sky: '#e8dfd0', props: ['houseplant', 'bookshelf', 'winefridge', 'espresso', 'floorlamp'],
+      edgeRows: 3, extras: 'coop', density: 10,
+      fixed: [
+        { c: 2, r: 4, w: 4, h: 2, name: 'fireplace' },
+        { c: 8, r: 4, w: 5, h: 2, name: 'kitchen' },
+        { c: 15, r: 4, w: 4, h: 3, name: 'hottub' },
+        { c: 7, r: 8, w: 5, h: 2, name: 'sofa' }
+      ]
     }
   };
 
@@ -264,6 +276,36 @@
         px(2, 7, 12, 7, '#a5713f'); px(2, 7, 12, 2, '#c08850');
         px(4, 5, 2, 3, '#8a5a33'); px(10, 5, 2, 3, '#8a5a33');
         px(4, 6, 3, 2, '#f7f2ea'); px(8, 5, 3, 2, '#f7f2ea'); px(6, 4, 3, 2, '#f7f2ea');
+        break;
+      case 'houseplant':
+        px(4, 10, 8, 6, '#c9805a'); px(4, 10, 8, 1, '#e09a72');
+        px(2, 3, 5, 8, '#2f7a38'); px(9, 2, 5, 9, '#3f9c4a'); px(6, 0, 4, 9, '#4bb058');
+        px(7, 5, 2, 4, '#2f6a30');
+        break;
+      case 'bookshelf':
+        px(1, 1, 14, 15, '#6b4a2a'); px(2, 2, 12, 13, '#8a6b4a');
+        [3, 7, 11].forEach(y => {
+          px(2, y, 12, 1, '#5a3d22');
+          for (let i = 0; i < 5; i++) px(3 + i * 2, y - 3, 2, 3, ['#c94a36', '#4b8fd0', '#e8c94a', '#3f9c4a', '#7a4fc0'][i]);
+        });
+        break;
+      case 'winefridge':
+        px(2, 1, 12, 15, '#2b2740'); px(3, 2, 10, 12, '#1a3a44');
+        for (let r = 0; r < 4; r++) {
+          for (let i = 0; i < 3; i++) px(4 + i * 3, 3 + r * 3, 2, 2, r % 2 ? '#6b1f2b' : '#3a5a2b');
+        }
+        px(3, 2, 10, 1, '#4bd0c8'); px(12, 7, 1, 3, '#b9b4c4');
+        break;
+      case 'espresso':
+        px(3, 4, 10, 10, '#c9c4d2'); px(3, 4, 10, 2, '#8d8794');
+        px(5, 7, 6, 3, '#2b2740'); px(6, 10, 4, 3, '#f2f2ef');
+        px(4, 5, 2, 1, '#4bd07a'); px(10, 5, 2, 1, '#e0553f');
+        px(3, 14, 10, 2, '#8d8794');
+        break;
+      case 'floorlamp':
+        px(7, 6, 2, 9, '#3a3a42'); px(5, 15, 6, 1, '#2b2b30');
+        px(4, 1, 8, 5, '#f7e07a'); px(5, 0, 6, 1, '#fff7c9');
+        px(4, 6, 8, 1, 'rgba(255,240,180,0.55)');
         break;
       default:
         px(3, 3, 10, 10, '#8d8794');
@@ -490,6 +532,7 @@
 
     if (th.extras === 'park') paintPark(ctx, th, rnd);
     else if (th.extras === 'farm') paintFarm(ctx, th, rnd);
+    else if (th.extras === 'coop') paintCoopHouse(ctx, th, rnd);
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -724,6 +767,132 @@
     fill(w - 16, 11, 12, 9, '#3a2f22');
     for (let i = 0; i < 12; i += 3) fill(w - 16 + i, 11, 1, 9, '#8d8794');
     for (let i = 0; i < 9; i += 3) fill(w - 16, 11 + i, 12, 1, '#8d8794');
+  }
+
+  function paintCoopHouse(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;   // back wall
+
+    fill(0, 0, W, band, '#e8dfd0');
+    fill(0, band - 6, W, 6, '#d6cab6');
+    fill(0, band - 2, W, 2, '#b8a88e');
+    for (let x = 0; x < W; x += 2) fill(x, 0, 1, band - 6, 'rgba(255,255,255,0.10)');
+
+    // picture window with a view of the yard
+    fill(104, 10, 58, 30, '#6b5238');
+    fill(108, 13, 50, 24, '#8fc4e8');
+    fill(108, 29, 50, 8, '#5e8f3e');
+    fill(112, 20, 9, 6, '#f7f2ea');
+    fill(134, 17, 12, 8, '#f7f2ea');
+    fill(132, 13, 2, 24, '#6b5238');
+
+    // framed art + a wall-mounted flat screen
+    fill(24, 12, 24, 20, '#c9a05a'); fill(27, 15, 18, 14, '#3f7fd0');
+    fill(30, 24, 12, 5, '#2a9c9c'); fill(33, 18, 5, 5, '#f7e07a');
+    fill(200, 8, 62, 34, '#241f30'); fill(203, 11, 56, 28, '#2b4a5a');
+    fill(206, 14, 24, 10, '#4bd0c8'); fill(206, 27, 40, 3, '#3f7fd0');
+    fill(226, 42, 10, 3, '#241f30');
+
+    // chandelier
+    fill(156, 0, 2, 8, '#8d8794');
+    fill(146, 8, 22, 3, '#e8c94a');
+    [148, 154, 160, 166].forEach(x => { fill(x, 11, 2, 4, '#fff7c9'); fill(x, 15, 2, 2, '#f7e07a'); });
+    ctx.fillStyle = 'rgba(255,240,180,0.13)';
+    ctx.fillRect(130, 11, 54, 40);
+
+    // wide hardwood planks
+    const plank = 6;
+    let row = 0;
+    for (let y = band; y < H; y += plank, row++) {
+      const tone = ['#b98a55', '#c0915c', '#b0824e', '#c4975f'][row % 4];
+      fill(0, y, W, plank, tone);
+      fill(0, y, W, 1, '#9c6f40');
+      for (let i = 0; i < 6; i++) {
+        fill(Math.floor(rnd() * W), y + 2 + Math.floor(rnd() * 3), 6 + Math.floor(rnd() * 10), 1, 'rgba(120,86,48,0.28)');
+      }
+      // staggered board ends
+      for (let x = (row % 3) * 26; x < W; x += 74) fill(x, y + 1, 1, plank - 1, '#8e6438');
+    }
+    // area rug
+    fill(96, 136, 96, 56, '#7a4fc0');
+    fill(100, 140, 88, 48, '#8d5fd6');
+    fill(108, 148, 72, 32, '#7a4fc0');
+    fill(116, 156, 56, 16, '#c0a8ea');
+
+    (th.fixed || []).forEach(f => {
+      const x = f.c * T, y = f.r * T, w = f.w * T, h = f.h * T;
+      if (f.name === 'fireplace') drawFireplace(ctx, x, y, w, h);
+      if (f.name === 'kitchen') drawKitchen(ctx, x, y, w, h);
+      if (f.name === 'hottub') drawHotTub(ctx, x, y, w, h);
+      if (f.name === 'sofa') drawSofa(ctx, x, y, w, h);
+    });
+
+    // party banner strung across the room
+    for (let x = 8; x < W - 8; x += 14) {
+      const sag = Math.round(Math.sin(x / 40) * 3);
+      fill(x, 50 + sag, 14, 1, '#9a94a8');
+      const c = ['#e0553f', '#e8c94a', '#4bd0c8', '#7a4fc0', '#3f9c4a'][(x / 14) % 5 | 0];
+      fill(x + 4, 51 + sag, 5, 3, c);
+      fill(x + 5, 54 + sag, 3, 2, c);
+      fill(x + 6, 56 + sag, 1, 1, c);
+    }
+  }
+
+  function drawFireplace(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, -10, w, h + 10, '#9a94a8');
+    fill(2, -8, w - 4, h + 8, '#b7b1bf');
+    for (let r = 0; r < 5; r++) for (let i = (r % 2) * 6; i < w - 4; i += 12) fill(2 + i, -8 + r * 6, 10, 5, '#a8a2b0');
+    fill(-2, -14, w + 4, 6, '#6b4a2a');            // mantel
+    fill(-2, -14, w + 4, 2, '#8a6b4a');
+    fill(8, 6, w - 16, h - 6, '#241f30');          // firebox
+    fill(11, h - 6, w - 22, 5, '#e0553f');
+    fill(14, h - 10, w - 28, 5, '#f0a53f');
+    fill(18, h - 8, w - 36, 4, '#f7e07a');
+    fill(6, -12, 5, 3, '#e8c94a');                 // trophy on the mantel
+    fill(w - 12, -12, 6, 3, '#4bd0c8');
+  }
+
+  function drawKitchen(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 0, w, h, '#4a4557');                   // island base
+    fill(-2, -4, w + 4, 6, '#d6d0c4');             // stone counter
+    fill(-2, -4, w + 4, 2, '#eae5da');
+    for (let i = 4; i < w; i += 9) fill(i, 4, 6, h - 8, '#5b5468');
+    fill(10, -10, 4, 7, '#b9b4c4');                // faucet
+    fill(10, -10, 12, 2, '#b9b4c4');
+    fill(30, -9, 10, 5, '#3f9c4a');                // fruit bowl
+    fill(32, -12, 3, 3, '#e0553f'); fill(36, -12, 3, 3, '#e8c94a');
+    fill(52, -11, 8, 7, '#6b1f2b');                // wine + glasses
+    fill(54, -14, 2, 4, '#6b1f2b');
+    fill(63, -10, 3, 5, '#cfe8f2'); fill(67, -10, 3, 5, '#cfe8f2');
+  }
+
+  function drawHotTub(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 0, w, h, '#6b4a2a');
+    fill(2, 2, w - 4, h - 4, '#8a6b4a');
+    fill(5, 5, w - 10, h - 10, '#2a9c9c');
+    fill(5, 5, w - 10, 3, '#4bd0c8');
+    [[10, 12], [24, 18], [38, 11], [18, 26], [32, 28]].forEach(([bx, by]) => {
+      if (bx < w - 8 && by < h - 6) { fill(bx, by, 3, 3, '#a8f0ea'); fill(bx + 1, by - 2, 2, 2, '#cff7f2'); }
+    });
+    fill(0, h - 4, w, 4, '#5a3d22');
+    fill(w - 10, -6, 8, 7, '#b9b4c4');             // control panel
+    fill(w - 8, -4, 4, 3, '#4bd07a');
+  }
+
+  function drawSofa(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, -8, w, 12, '#3a5a8c');                 // backrest
+    fill(2, -6, w - 4, 8, '#4b6fa8');
+    fill(0, 2, w, h - 2, '#3a5a8c');               // seat
+    fill(3, 3, w - 6, h - 6, '#5580c0');
+    for (let i = 6; i < w - 6; i += 18) fill(i, 4, 14, h - 8, '#4b6fa8');
+    fill(-3, -6, 5, h + 6, '#2f4a75');             // arms
+    fill(w - 2, -6, 5, h + 6, '#2f4a75');
+    fill(6, -4, 7, 6, '#e8c94a');                  // throw pillows
+    fill(w - 16, -4, 7, 6, '#c94a36');
   }
 
   function isSolidPixel(map, x, y) {

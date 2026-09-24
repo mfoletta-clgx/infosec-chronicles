@@ -75,6 +75,29 @@
       appearance: Appearance.human({
         skin: '#f0cdae', hair: '#8f8f99', shirt: '#8a4a3a', pants: '#4a5a6b', shoes: '#5a4030'
       })
+    },
+    {
+      id: 'austin', name: 'Austin', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#5a3620', shirt: '#3f9c4a', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'milly', name: 'Milly', role: 'pet', owner: 'Austin',
+      notes: 'long-haired chihuahua, cream coat, white chest, wears headphones',
+      appearance: Appearance.pet({
+        species: 'dog', coat: '#e8d3ac', accent: '#f9f5ec',
+        nose: '#4a3830', paws: '#d4bd93', headphones: '#a2988a'
+      })
+    },
+    {
+      id: 'mochi', name: 'Mochi', role: 'pet', owner: 'Austin',
+      notes: 'fluffy white maltese, dark eyes and nose, pink leash',
+      appearance: Appearance.pet({
+        species: 'dog', coat: '#f7f4ee', accent: '#ffffff',
+        nose: '#241d29', paws: '#e2ddd3', collar: '#e88fb8'
+      })
     }
   ];
 

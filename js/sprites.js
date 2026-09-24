@@ -520,6 +520,19 @@
     if (dir === 'up' || dir === 'down') {
       // nothing extra; side art doubles as 3/4 view in this art style
     }
+
+    if (a.collar) {
+      px(ctx, 8, 8, 5, 1, a.collar);
+      px(ctx, 10, 9, 1, 1, shade(a.collar, 0.4));
+    }
+    if (a.headphones) {
+      const hp = a.headphones, hpD = shade(hp, -0.55);
+      px(ctx, 7, 7, 5, 1, hpD);          // band slung around the neck
+      px(ctx, 6, 7, 2, 2, hp);
+      px(ctx, 6, 9, 2, 1, hpD);
+      px(ctx, 11, 7, 2, 2, hp);
+      px(ctx, 11, 9, 2, 1, hpD);
+    }
   }
 
   // --------------------------------------------------------------- sheet API

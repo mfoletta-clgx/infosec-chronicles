@@ -27,7 +27,12 @@
       mission, map, canvas, ctx, hooks: hooks || {},
       mode: 'roam',
       player: { x: mission.heroSpawn.x, y: mission.heroSpawn.y, dir: 'up', frame: 0, moving: false, anim: 0 },
-      pet: mission.petLook ? { x: mission.heroSpawn.x, y: mission.heroSpawn.y + 12, dir: 'up', frame: 0, anim: 0 } : null,
+      pets: (mission.pets && mission.pets.length ? mission.pets : (mission.petLook ? [{ name: mission.pet, look: mission.petLook }] : []))
+        .map((p, i) => ({
+          name: p.name, look: p.look,
+          x: mission.heroSpawn.x, y: mission.heroSpawn.y + 12,
+          dir: 'up', frame: 0, anim: 0, offset: 16 + i * 12
+        })),
       trail: [],
       keys: Object.create(null),
       itemVisible: false,
@@ -41,11 +46,16 @@
         vx: 0, vy: 0, wander: 0, stam: 100, tired: 0, caught: false, bawk: 0
       })),
       caughtCount: 0,
+      collectibles: (mission.collectibles || []).map(c => Object.assign({ taken: false }, c)),
+      collected: 0,
+      interior: false,
+      partyActors: [],
+      confettiUntil: 0,
+      scannerTried: false,
       melon: null,
       melonCooldown: 0,
       puffs: [],
       dialogueQueue: [],
-      dialogueSpeaker: null,
       typed: 0,
       typeTimer: 0,
       startedAt: performance.now(),
@@ -62,9 +72,15 @@
 
     bindInput();
     if (!mission.npcs.length && mission.finale !== 'chickens') state.itemVisible = true;
+    buryCollectibles();
     renderHud();
-    if (mission.petLines.length) queueDialogue(mission.pet, mission.petLook, [mission.petLines[0]]);
-    else if (mission.introLines.length) queueDialogue(mission.hero, mission.heroLook, mission.introLines);
+    if (mission.openingLines && mission.openingLines.length) {
+      queueScript(mission.openingLines, () => { if (mission.startHint) toast(mission.startHint, 5000); });
+    } else if (mission.introLines.length) {
+      queueDialogue(mission.hero, mission.heroLook, mission.introLines);
+    } else if (mission.startHint) {
+      toast(mission.startHint, 5000);
+    }
     state.raf = requestAnimationFrame(loop);
     return state;
   }
@@ -176,10 +192,9 @@
   }
 
   function followPet(dt) {
-    const pet = state.pet;
-    if (!pet) return;
-    const idx = state.trail.length - 18;
-    if (idx >= 0) {
+    for (const pet of state.pets) {
+      const idx = state.trail.length - pet.offset;
+      if (idx < 0) continue;
       const t = state.trail[idx];
       const moved = Math.abs(pet.x - t.x) > 0.4 || Math.abs(pet.y - t.y) > 0.4;
       pet.x += (t.x - pet.x) * 0.25;
@@ -212,6 +227,11 @@
       const d = Math.hypot(ch.x + 8 - f.x, ch.y + 10 - f.y);
       if (d < 17 && (!best || d < best.d)) best = { d, type: 'chicken', chicken: ch };
     }
+    for (const it of state.collectibles) {
+      if (it.taken || it.buried) continue;
+      const d = Math.hypot(it.x + 8 - f.x, it.y + 8 - f.y);
+      if (d < 16 && (!best || d < best.d)) best = { d, type: 'pickup', pickup: it };
+    }
     if (state.itemVisible && !state.itemTaken) {
       const it = state.mission.item;
       const d = Math.hypot(it.x + 8 - f.x, it.y + 8 - f.y);
@@ -225,9 +245,13 @@
     if (state.mode === 'dialogue') { advanceDialogue(); return; }
     if (state.mode !== 'roam') return;
     const target = nearestTarget();
-    if (!target) return;
+    if (!target) {
+      if (state.scannerTried) attemptDig();
+      return;
+    }
     if (target.type === 'npc') talkTo(target.npc);
     else if (target.type === 'chicken') catchChicken(target.chicken);
+    else if (target.type === 'pickup') pickUp(target.pickup);
     else takeItem();
   }
 
@@ -305,15 +329,19 @@
         ch.frame = Math.floor(ch.anim / 100) % 4;
       } else ch.frame = 0;
     }
+  }
 
-    // feather puffs
+  function updatePuffs(dt, now) {
+    if (state.confettiUntil > now && Math.random() < 0.5) state.puffs.push(confettiBit());
+    const partying = state.confettiUntil > now;
     for (let i = state.puffs.length - 1; i >= 0; i--) {
       const p = state.puffs[i];
       p.x += p.vx * (dt / 16.666);
       p.y += p.vy * (dt / 16.666);
-      p.vy += 0.02 * (dt / 16.666);
+      if (partying) p.vx = Math.sin((now + i * 90) / 320) * 0.6;
+      else p.vy += 0.02 * (dt / 16.666);
       p.life -= dt;
-      if (p.life <= 0) state.puffs.splice(i, 1);
+      if (p.life <= 0 || p.y > World.H + 6) state.puffs.splice(i, 1);
     }
   }
 
@@ -414,8 +442,210 @@
     }
   }
 
+  // -------------------------------------------------------- passkey mission
+  const SNIFF_RANGE = 150;
+  const DIG_RANGE = 20;
+
+  /** Buried items move every playthrough, so the radar is the only way to find them. */
+  function buryCollectibles() {
+    const m = state.mission;
+    const buried = state.collectibles.filter(c => c.buried);
+    if (!buried.length) return;
+    const cells = World.freeCells(state.map).filter(cell => {
+      const x = cell.c * T, y = cell.r * T;
+      return Math.hypot(x - m.heroSpawn.x, y - m.heroSpawn.y) > 72 &&
+        Math.hypot(x - m.item.x, y - m.item.y) > 56;
+    });
+    buried.forEach(it => {
+      const pick = cells.length ? cells[Math.floor(Math.random() * cells.length)] : { c: it.c, r: it.r };
+      it.c = pick.c; it.r = pick.r;
+      it.x = pick.c * T; it.y = pick.r * T;
+    });
+  }
+
+  function buriedTarget() {
+    return state.collectibles.find(c => c.buried && !c.taken) || null;
+  }
+
+  function distanceTo(it) {
+    return Math.hypot((state.player.x + 8) - (it.x + 8), (state.player.y + 10) - (it.y + 8));
+  }
+
+  function spawnDirt(x, y) {
+    for (let i = 0; i < 9; i++) {
+      state.puffs.push({
+        x: x + 8, y: y + 13,
+        vx: (Math.random() - 0.5) * 2.2,
+        vy: -Math.random() * 1.5 - 0.2,
+        life: 450 + Math.random() * 350,
+        color: ['#7a5a33', '#8a6b4a', '#6b4a2a'][i % 3]
+      });
+    }
+  }
+
+  function attemptDig() {
+    const it = buriedTarget();
+    if (!it) return false;
+    spawnDirt(state.player.x, state.player.y);
+    const d = distanceTo(it);
+    if (d <= DIG_RANGE) { pickUp(it); return true; }
+    toast(d < 55
+      ? 'You dig. Dirt, a rock, and two extremely interested dogs. Close, though.'
+      : 'You dig. Nothing down here but dirt and an old chicken bone.');
+    return true;
+  }
+
+  function scentLabel(d) {
+    if (d <= DIG_RANGE) return 'DIG HERE!';
+    if (d < 52) return 'RED HOT';
+    if (d < 92) return 'WARM';
+    if (d < SNIFF_RANGE) return 'COOL';
+    return 'STONE COLD';
+  }
+
+  function scentColor(d) {
+    if (d <= DIG_RANGE) return '#e0553f';
+    if (d < 52) return '#f0705a';
+    if (d < 92) return '#f0a53f';
+    if (d < SNIFF_RANGE) return '#f7e07a';
+    return '#4b8fd0';
+  }
+
+  function drawScent(ctx, now) {
+    const it = buriedTarget();
+    if (!it || !state.scannerTried || state.mode !== 'roam') return;
+    const d = distanceTo(it);
+    const pct = Math.max(0.02, 1 - d / SNIFF_RANGE);
+    const w = 104;
+    const x = 8, y = World.H - 15;
+
+    ctx.fillStyle = 'rgba(20,16,31,0.82)';
+    ctx.fillRect(x - 3, y - 11, w + 6, 24);
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#cfc4e6';
+    ctx.fillText('DOG NOSE', x, y - 3);
+    ctx.fillStyle = scentColor(d);
+    ctx.textAlign = 'right';
+    ctx.fillText(scentLabel(d), x + w, y - 3);
+    ctx.textAlign = 'left';
+    meter(ctx, x, y, w, 8, pct, scentColor(d), '');
+
+    // the dogs get louder the closer you are
+    if (d < 52 && Math.floor(now / 380) % 2 === 0) state.petBubble = 200;
+    if (d <= DIG_RANGE) {
+      const pulse = 4 + Math.round(Math.sin(now / 130) * 2);
+      ctx.strokeStyle = 'rgba(224,85,63,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(state.player.x + 8, state.player.y + 13, 8 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function collectiblesLeft() {
+    return state.mission.collectibles.length - state.collected;
+  }
+
+  function pickUp(item) {
+    item.taken = true;
+    state.collected++;
+    renderHud();
+    const left = collectiblesLeft();
+    queueDialogue(state.mission.hero, state.mission.heroLook, [
+      item.found || ('Picked up ' + item.label + '.'),
+      left > 0
+        ? (left + ' more to go, then we try that scanner again.')
+        : 'Now back to the coop door and get these two enrolled.'
+    ]);
+  }
+
+  function useScanner() {
+    const m = state.mission;
+    if (collectiblesLeft() > 0) {
+      queueScript(m.deniedLines || [
+        'COOP-SEC v2.1: PAW ACCEPTED. CONSENT FORM NOT ON FILE. ACCESS DENIED.'
+      ]);
+      state.scannerTried = true;
+      renderHud();
+      return;
+    }
+    state.itemTaken = true;
+    queueScript(m.grantedLines || ['COOP-SEC v2.1: ACCESS GRANTED.'], () => enterCoop());
+  }
+
+  function enterCoop() {
+    const m = state.mission;
+    const guests = (m.party && m.party.guests) || [];
+    state.interior = true;
+    state.map = World.createMap('coophouse', m.missionId + '-inside',
+      [{ c: 10, r: 12 }, { c: 10, r: 11 }].concat(guests.map(g => ({ c: g.c, r: g.r }))));
+    state.player.x = 10 * T;
+    state.player.y = 11 * T;
+    state.player.dir = 'up';
+    state.trail = [];
+    state.pets.forEach((p, i) => { p.x = (9 + i * 2) * T; p.y = 12 * T; p.dir = 'up'; });
+    state.partyActors = guests.map(g => ({
+      name: g.name,
+      look: g.species
+        ? Appearance.pet({ species: g.species, coat: g.coat || '#c9a06a', accent: g.accent || '#f2e3c8', comb: '#c94a36', beak: '#e8a531' })
+        : Roster.lookAt(g.name, 'human'),
+      x: g.c * T, y: g.r * T, dir: g.dir || 'down'
+    }));
+    for (let i = 0; i < 70; i++) state.puffs.push(confettiBit());
+    state.confettiUntil = performance.now() + 12000;
+    renderHud();
+    queueScript((m.party && m.party.lines) || ['Shane: Welcome in.'], () => win());
+  }
+
+  function confettiBit() {
+    return {
+      x: Math.random() * World.W,
+      y: -Math.random() * 40,
+      vx: (Math.random() - 0.5) * 0.9,
+      vy: 0.5 + Math.random() * 0.9,
+      life: 2600 + Math.random() * 2600,
+      color: ['#e0553f', '#e8c94a', '#4bd0c8', '#7a4fc0', '#3f9c4a', '#f2f2ef'][Math.floor(Math.random() * 6)]
+    };
+  }
+
+  function drawScanner(ctx, x, y, now) {
+    const ok = collectiblesLeft() === 0;
+    const px2 = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, w, h); };
+    px2(2, 1, 12, 14, '#2b2740');
+    px2(3, 2, 10, 12, '#3c3849');
+    px2(4, 3, 8, 6, ok ? '#1a4a3a' : '#4a1a20');
+    // paw glyph
+    px2(6, 5, 4, 3, ok ? '#4bd07a' : '#e0553f');
+    px2(5, 4, 1, 1, ok ? '#4bd07a' : '#e0553f');
+    px2(7, 3, 1, 1, ok ? '#4bd07a' : '#e0553f');
+    px2(9, 4, 1, 1, ok ? '#4bd07a' : '#e0553f');
+    const blink = Math.floor(now / 400) % 2;
+    px2(5, 11, 6, 2, ok ? '#4bd07a' : (blink ? '#e0553f' : '#5a2228'));
+    if (ok) {
+      ctx.fillStyle = 'rgba(75,208,122,' + (0.12 + 0.08 * Math.sin(now / 200)) + ')';
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 8, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /** Points at the objective when it is somewhere the player is simply meant to walk to. */
+  function drawWaypoint(ctx, x, y, now) {
+    const bob = Math.round(Math.sin(now / 280) * 2);
+    const cx = Math.round(x) + 8;
+    const top = Math.round(y) - 20 + bob;
+    ctx.fillStyle = '#1a1220';
+    ctx.fillRect(cx - 7, top - 2, 14, 11);
+    ctx.fillStyle = '#f7e07a';
+    ctx.fillRect(cx - 6, top - 1, 12, 9);
+    ctx.fillStyle = '#1a1220';
+    [9, 7, 5, 3, 1].forEach((w, i) => ctx.fillRect(cx - (w - 1) / 2, top + i + 2, w, 1));
+  }
+
   function takeItem() {
     if (state.mission.finale === 'fishing') { startFishing(); return; }
+    if (state.mission.finale === 'passkey') { useScanner(); return; }
     state.itemTaken = true;
     state.mode = 'roam';
     queueDialogue(state.mission.hero, state.mission.heroLook, [
@@ -604,12 +834,24 @@
   function useCompanion() {
     if (!state || state.mode !== 'roam') return;
     if (state.mission.finale === 'chickens') { putOutMelon(); return; }
-    if (!state.pet) return;
+    if (!state.pets.length) return;
     const it = state.mission.item;
     const p = state.player;
     const d = Math.hypot(it.x - p.x, it.y - p.y);
     let msg;
-    if (!state.itemVisible) msg = '*sniffs* Talk to everyone first \u2014 the trail is cold.';
+    if (state.mission.finale === 'passkey') {
+      const left = state.mission.collectibles.length - state.collected;
+      const buried = buriedTarget();
+      if (state.interior) msg = '*zoomies* BEST DAY. BEST COOP.';
+      else if (buried) {
+        const d = distanceTo(buried);
+        if (d <= DIG_RANGE) msg = '*both dogs digging furiously* HERE. IT IS HERE. DIG.';
+        else if (d < 52) msg = '*frantic sniffing* SO CLOSE. Barely a few steps.';
+        else if (d < 92) msg = '*nose down, tail going* Something paper-ish this way.';
+        else msg = '*bored sniff* Nothing out here. Try somewhere else entirely.';
+      } else if (left > 0) msg = '*sniff sniff* the consent form is out here somewhere. No form, no paws.';
+      else msg = '*scratching at the door* IT IS READY. LET US IN.';
+    } else if (!state.itemVisible) msg = '*sniffs* Talk to everyone first \u2014 the trail is cold.';
     else if (state.itemTaken) msg = '*happy tail wag* Mission basically complete!';
     else if (d < 40) msg = '*BARK BARK BARK!* It is RIGHT THERE!';
     else if (d < 90) msg = '*excited sniffing* Getting warm...';
@@ -619,26 +861,44 @@
     toast((state.mission.pet || 'Companion') + ': ' + msg);
   }
 
-  function toast(text) {
+  function toast(text, ms) {
     state.toast = text;
-    state.toastUntil = performance.now() + 2200;
+    state.toastUntil = performance.now() + (ms || 2200);
   }
 
   function capitalize(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
 
   // --------------------------------------------------------------- dialogue
   function queueDialogue(name, look, lines, onDone) {
+    queueEntries(lines.map(text => ({ name: name || '???', look: look, text: text })), onDone);
+  }
+
+  /** Lines written as "Name: text" keep their own speaker and portrait. */
+  function queueScript(lines, onDone) {
+    queueEntries(lines.map(raw => {
+      const parsed = Missions.parseLine(raw);
+      const speaker = parsed.speaker || state.mission.hero;
+      // An ALL-CAPS speaker with no roster entry is a machine, not a character.
+      const isDevice = !Roster.find(speaker) && /^[A-Z0-9][A-Z0-9 .\-_]*$/.test(speaker);
+      return {
+        name: speaker,
+        look: isDevice ? null : Roster.lookAt(speaker, parsed.isPet ? 'pet' : 'human'),
+        text: parsed.text
+      };
+    }), onDone);
+  }
+
+  function queueEntries(entries, onDone) {
     state.mode = 'dialogue';
-    state.dialogueQueue = lines.slice();
-    state.dialogueSpeaker = { name: name || '???', look };
+    state.dialogueQueue = entries.slice();
     state.dialogueDone = onDone || null;
     showLine();
   }
 
   function showLine() {
     const box = el('dialogue');
-    const line = state.dialogueQueue.shift();
-    if (line == null) {
+    const entry = state.dialogueQueue.shift();
+    if (!entry) {
       box.hidden = true;
       state.mode = 'roam';
       const done = state.dialogueDone;
@@ -647,13 +907,13 @@
       return;
     }
     box.hidden = false;
-    el('dlg-name').textContent = state.dialogueSpeaker.name;
+    el('dlg-name').textContent = entry.name;
     const portrait = el('dlg-portrait');
-    if (state.dialogueSpeaker.look) {
-      portrait.src = Sprites.portraitDataURL(state.dialogueSpeaker.look, 4);
+    if (entry.look) {
+      portrait.src = Sprites.portraitDataURL(entry.look, 4);
       portrait.hidden = false;
     } else portrait.hidden = true;
-    state.fullText = line;
+    state.fullText = entry.text;
     state.typed = 0;
     state.typeTimer = 0;
     el('dlg-text').textContent = '';
@@ -752,7 +1012,15 @@
     el('hud-objective').textContent = m.objective;
     const total = m.npcs.length;
     let step;
-    if (state.itemTaken) step = m.trivia ? 'Answer the riddle to close the ticket.' : 'Head home, hero.';
+    if (state.interior) step = 'You are in. Behave yourself.';
+    else if (state.itemTaken) step = m.trivia ? 'Answer the riddle to close the ticket.' : 'Head home, hero.';
+    else if (state.mission.finale === 'passkey') {
+      step = !state.scannerTried
+        ? 'Try the biometric scanner on the coop door.'
+        : (collectiblesLeft() > 0
+          ? 'Follow the dogs\u2019 noses  \u00b7  A = dig  \u00b7  B = ask them'
+          : 'Take the consent form back to the scanner.');
+    }
     else if (state.chickens.length) step = 'Waivers recovered: ' + state.caughtCount + '/' + state.chickens.length + '  \u00b7  B = put out watermelon';
     else if (state.mode === 'fishing') step = 'Hold Space / A to reel him in!';
     else if (m.finale === 'fishing' && state.itemVisible) step = 'Get to the rod at the stern rail.';
@@ -770,13 +1038,29 @@
     ctx.drawImage(state.map.background, 0, 0);
 
     if (state.itemVisible && !state.itemTaken) {
-      Missions.drawItem(ctx, m.finale === 'fishing' ? 'rod' : m.item.kind, m.item.x, m.item.y, now);
+      if (m.finale === 'passkey') drawScanner(ctx, m.item.x, m.item.y, now);
+      else Missions.drawItem(ctx, m.finale === 'fishing' ? 'rod' : m.item.kind, m.item.x, m.item.y, now);
     }
+    // signpost the door on the way out and the way back, but never the hunt itself
+    if (m.finale === 'passkey' && !state.itemTaken && (!state.scannerTried || collectiblesLeft() === 0)) {
+      if (Math.hypot(state.player.x - m.item.x, state.player.y - m.item.y) > 34) {
+        drawWaypoint(ctx, m.item.x, m.item.y, now);
+      }
+    }
+    state.collectibles.forEach(it => {
+      if (!it.taken && !it.buried) Missions.drawItem(ctx, it.kind, it.x, it.y, now);
+    });
     drawMelon(ctx, now);
     const actors = [];
     m.npcs.forEach(n => actors.push({ y: n.y, draw: () => drawActor(ctx, n.look, n.x, n.y, n.dir, 0, n.talked ? null : 'bang') }));
     state.chickens.forEach(ch => actors.push({ y: ch.y, draw: () => drawChicken(ctx, ch) }));
-    if (state.pet) actors.push({ y: state.pet.y, draw: () => drawActor(ctx, m.petLook, state.pet.x, state.pet.y, state.pet.dir, state.pet.frame, state.petBubble > 0 ? 'bark' : null) });
+    state.partyActors.forEach(g => actors.push({ y: g.y, draw: () => drawActor(ctx, g.look, g.x, g.y, g.dir, 0, null) }));
+    if (state.pets.length) {
+      state.pets.forEach(pet => actors.push({
+        y: pet.y,
+        draw: () => drawActor(ctx, pet.look, pet.x, pet.y, pet.dir, pet.frame, state.petBubble > 0 ? 'bark' : null)
+      }));
+    }
     actors.push({ y: state.player.y, draw: () => drawActor(ctx, m.heroLook, state.player.x, state.player.y, state.player.dir, state.player.frame, null) });
     actors.sort((a, b) => a.y - b.y).forEach(a => a.draw());
     drawPuffs(ctx);
@@ -788,6 +1072,8 @@
       if (target) {
         if (target.type === 'npc') prompt = 'Talk to ' + target.npc.name;
         else if (target.type === 'chicken') prompt = 'Grab the waiver from ' + target.chicken.name;
+        else if (target.type === 'pickup') prompt = 'Pick up ' + target.pickup.label;
+        else if (m.finale === 'passkey') prompt = collectiblesLeft() ? 'Try the biometric scanner' : 'Enroll paw print authentication';
         else prompt = m.finale === 'fishing' ? 'Grab the rod and fight the fish' : 'Grab ' + m.item.label;
       }
     }
@@ -803,6 +1089,7 @@
     ctx.fillRect(0, World.H - 2, World.W, 2);
 
     if (state.mode === 'fishing') drawFishing(ctx, now);
+    drawScent(ctx, now);
   }
 
   function drawActor(ctx, look, x, y, dir, frame, mark) {
@@ -840,6 +1127,7 @@
     if (state.mode === 'roam') { move(dt); followPet(dt); }
     else { state.player.frame = 0; }
     if (state.chickens.length) updateChickens(state.mode === 'roam' ? dt : 0, now);
+    updatePuffs(dt, now);
     if (state.mode === 'fishing') tickFishing(dt);
     if (state.petBubble > 0) state.petBubble -= dt;
     tickText(dt);

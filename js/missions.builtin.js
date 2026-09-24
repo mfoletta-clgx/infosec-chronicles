@@ -67,6 +67,68 @@
       ],
 
       outro: 'Three waivers recovered, two only lightly chewed. Cluck Norris remains unrepentant and has been added to the risk register.'
+    },
+    {
+      missionId: 'ep-04-paws-and-passkeys',
+      title: 'Operation: Paws & Passkeys',
+      hero: 'Austin',
+      companionPets: ['Milly', 'Mochi'],
+      objective: 'Take Milly and Mochi to the coop door and get them through it!',
+      startHint: 'Head for the coop at the top right and try the scanner \u2014 follow the arrow.',
+      theme: 'farm',
+      finale: 'passkey',
+      reward: 'Certified Good Boys',
+      item: { kind: 'scanner', name: 'the biometric scanner', c: 16, r: 5 },
+      dialogue: [
+        'Austin: Shane finally turned on passwordless at the chicken coop. Fingerprint, facial recognition, the whole setup.',
+        'Austin: Milly and Mochi are going to love this. No more waiting on me to open the door.',
+        'Milly (Pet): *headphones on, entirely unbothered* I was told there would be a party.',
+        'Mochi (Pet): *already scratching at the door* LET US IN LET US IN LET US IN'
+      ],
+      deniedLines: [
+        'COOP-SEC: BIOMETRIC ENROLLMENT STARTING. PLEASE PRESENT FINGERPRINT.',
+        'COOP-SEC: NO FINGERPRINT DETECTED. FALLING BACK TO FACIAL RECOGNITION.',
+        'COOP-SEC: FACE NOT RECOGNIZED. SUBJECT APPEARS TO BE A VERY SMALL DOG.',
+        'COOP-SEC: ACCESS DENIED. BIOMETRIC CONSENT NOT FOUND.',
+        'Austin: Right \u2014 before anyone can use fingerprint or face unlock, they have to consent to it first.',
+        'Austin: And that consent form lives in Saviynt. Same as the passwordless rollout at work.',
+        'Austin: I printed a copy and... Mochi buried it in the yard. Obviously.',
+        'Austin: Milly, Mochi \u2014 find it. Watch their noses. The colder the reading, the further off I am.'
+      ],
+      collectibles: [
+        {
+          kind: 'certificate', label: 'the biometric consent form', buried: true, c: 5, r: 9,
+          found: 'Both dogs got to it before I did. The biometric consent form \u2014 submitted through Saviynt, exactly like the real passwordless rollout. No consent on file, no fingerprint, no face unlock, no paws. Signed, filed, slightly chewed.'
+        }
+      ],
+      grantedLines: [
+        'COOP-SEC: BIOMETRIC CONSENT ON FILE VIA SAVIYNT. THANK YOU.',
+        'COOP-SEC: FINGERPRINT AND FACIAL RECOGNITION UNSUPPORTED FOR THIS SUBJECT TYPE.',
+        'COOP-SEC: ENROLLING ALTERNATIVE MODALITY \u2014 PAW PRINT AUTHENTICATION.',
+        'COOP-SEC: PRESENT LEFT FRONT PAW... CAPTURED. PRESENT RIGHT FRONT PAW... CAPTURED.',
+        'Mochi (Pet): *presents paw with enormous dignity*',
+        'COOP-SEC: PAW PRINT ENROLLED. ACCESS GRANTED. WELCOME, GOOD DOGS.'
+      ],
+      party: {
+        speaker: 'Shane',
+        guests: [
+          { name: 'Shane', c: 5, r: 7 },
+          { name: 'Marshmallow', species: 'chicken', coat: '#f4f1ea', accent: '#d8d2c4', c: 13, r: 7 },
+          { name: 'Hen Solo', species: 'chicken', coat: '#8a5a33', accent: '#6b4023', c: 16, r: 9, dir: 'left' },
+          { name: 'Cluck Norris', species: 'chicken', coat: '#2f2b33', accent: '#4a4550', c: 4, r: 10, dir: 'right' }
+        ],
+        lines: [
+          'Shane: Welcome in. Mind the heated floors, they are on a schedule.',
+          'Austin: Shane. Your chickens have a chandelier.',
+          'Shane: They have a chandelier, a hot tub, a wine fridge and better wifi than the office. Yes.',
+          'Austin: My apartment has none of those things.',
+          'Shane: Your apartment also does not have biometric access control on the front door. Take notes.',
+          'Milly (Pet): *plugs headphones into the sound system* This is my party now.',
+          'Mochi (Pet): *immediately gets in the hot tub*',
+          'Shane: ...The hot tub was NOT part of the access request.'
+        ]
+      },
+      outro: 'Consent filed in Saviynt, paw prints enrolled, and two dogs are now permanent residents of the nicest coop in the county.'
     }
   ];
 })(window);

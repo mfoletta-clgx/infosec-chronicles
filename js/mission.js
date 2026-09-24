@@ -109,6 +109,11 @@
         px(5, 10, 1, 1, '#4bd07a'); px(7, 10, 1, 1, '#e0553f'); px(9, 10, 1, 1, '#e0553f');
         px(6, 1, 4, 1, 'rgba(224,85,63,0.75)'); px(5, 0, 6, 1, 'rgba(224,85,63,0.45)');
         break;
+      case 'passkey':
+        px(3, 4, 10, 9, '#2b2740'); px(4, 5, 8, 7, '#3f7fd0');
+        px(6, 6, 4, 4, '#fff7c9'); px(7, 7, 2, 2, '#8a6b1f');
+        px(6, 10, 4, 1, '#fff7c9'); px(5, 13, 6, 1, '#8d8794');
+        break;
       default:
         px(4, 4, 8, 8, '#e8c94a'); px(6, 6, 4, 4, '#f7e07a');
     }
@@ -193,21 +198,27 @@
     const rnd = World.mulberry32(World.hashString(missionId));
 
     const heroName = m.hero || m.player || 'Agent';
-    const petName = m.companionPet || m.pet || '';
+    const petNames = (m.companionPets || (m.companionPet ? [m.companionPet] : [])).filter(Boolean);
+    const petName = petNames[0] || '';
     const themeName = detectTheme(m);
     const item = detectItem(m);
 
-    const lines = (m.dialogue || []).map(parseLine).filter(l => l.text);
+    const lines = (m.dialogue || []).map(raw => {
+      const parsed = parseLine(raw);
+      parsed.raw = raw;
+      return parsed;
+    }).filter(l => l.text);
     const petLines = [];
     const heroLines = [];
+    const openingLines = [];
     const npcOrder = [];
     const npcMap = new Map();
 
     for (const l of lines) {
       const isHero = l.speaker && l.speaker.toLowerCase() === String(heroName).toLowerCase();
-      const isPet = l.isPet || (petName && l.speaker.toLowerCase() === String(petName).toLowerCase());
-      if (isPet) { petLines.push(l.text); continue; }
-      if (isHero) { heroLines.push(l.text); continue; }
+      const isPet = l.isPet || petNames.some(p => l.speaker.toLowerCase() === String(p).toLowerCase());
+      if (isPet) { petLines.push(l.text); openingLines.push(l.raw); continue; }
+      if (isHero) { heroLines.push(l.text); openingLines.push(l.raw); continue; }
       const name = l.speaker || 'Mystery Voice';
       if (!npcMap.has(name)) { npcMap.set(name, []); npcOrder.push(name); }
       npcMap.get(name).push(l.text);
@@ -240,7 +251,8 @@
       };
     });
 
-    const itemSpot = onBoat ? { c: 12, r: 11 } : (spots[npcs.length] || { c: 5, r: 8 });
+    const fixedItem = m.item && m.item.c != null ? { c: m.item.c, r: m.item.r } : null;
+    const itemSpot = fixedItem || (onBoat ? { c: 12, r: 11 } : (spots[npcs.length] || { c: 5, r: 8 }));
     reserved.push(itemSpot);
 
     const chickens = (m.chickens || []).slice(0, 5).map((c, i) => {
@@ -264,6 +276,23 @@
       : (m.trivia !== undefined ? m.trivia : m.riddle);
     const trivia = normalizeTrivia(triviaRaw, m);
     const petMember = petName ? Roster.memberFor(petName, 'pet') : null;
+    const pets = petNames.map(n => {
+      const pm = Roster.memberFor(n, 'pet');
+      return { name: pm.name, look: pm.appearance };
+    });
+
+    const collectibles = (m.collectibles || []).map((it, i) => {
+      const spot = (THEME_SPOTS[themeName] || CANDIDATES)[(i * 2 + 2) % (THEME_SPOTS[themeName] || CANDIDATES).length];
+      const cell = it.c != null ? { c: it.c, r: it.r } : spot;
+      reserved.push(cell);
+      return {
+        kind: it.kind || 'artifact',
+        label: it.label || ITEM_LABELS[it.kind] || 'the objective',
+        found: it.found || '',
+        buried: !!it.buried,
+        c: cell.c, r: cell.r, x: cell.c * T, y: cell.r * T
+      };
+    });
 
     return {
       missionId,
@@ -271,18 +300,25 @@
       hero: heroName,
       heroLook: Roster.lookAt(heroName, 'human'),
       pet: petName || null,
+      pets,
       petLook: petMember ? petMember.appearance : null,
       petBuff: petMember ? Roster.buffFor(petMember.appearance && petMember.appearance.species) : null,
       petLines: petLines.length ? petLines : (petName ? ['*sniff sniff* ... something is definitely buried around here.'] : []),
       objective: m.objective || 'Complete the mission.',
+      startHint: m.startHint || '',
       intro: m.intro || heroLines.join(' '),
       introLines: heroLines.length ? heroLines : (m.intro ? [m.intro] : []),
+      openingLines,
       outro: m.outro || '',
       reward: m.reward || 'Byte-Sized Badge',
       themeName,
       themeLabel: (World.THEMES[themeName] || {}).label || 'Somewhere Suspicious',
       npcs,
       finale: m.finale || null,
+      collectibles,
+      party: m.party || null,
+      deniedLines: m.deniedLines || null,
+      grantedLines: m.grantedLines || null,
       chickens,
       item: { kind: item.kind, label: item.label, c: itemSpot.c, r: itemSpot.r, x: itemSpot.c * T, y: itemSpot.r * T },
       heroSpawn: { x: hero.c * T, y: hero.r * T },
