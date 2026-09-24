@@ -114,7 +114,7 @@
       meta.className = 'meta';
       meta.innerHTML = '<div class="name"></div><div class="sub"></div>';
       meta.querySelector('.name').textContent = mission.title;
-      meta.querySelector('.sub').textContent = mission.themeLabel + ' \u00b7 ' + mission.objective;
+      meta.querySelector('.sub').textContent = mission.hero + ' \u00b7 ' + mission.objective;
       btn.appendChild(meta);
       const rec = done[mission.missionId];
       if (rec) {

@@ -73,7 +73,7 @@
       title: 'Operation: Paws & Passkeys',
       hero: 'Austin',
       companionPets: ['Milly', 'Mochi'],
-      objective: 'Take Milly and Mochi to the coop door and get them through it!',
+      objective: "Milly and Mochi failed biometric setup at Shane's coop. Dig up the consent form and enroll their paws!",
       startHint: 'Head for the coop at the top right and try the scanner \u2014 follow the arrow.',
       theme: 'farm',
       finale: 'passkey',
