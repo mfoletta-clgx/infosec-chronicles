@@ -87,8 +87,27 @@
         { c: 15, r: 4, w: 4, h: 3, name: 'hottub' },
         { c: 7, r: 8, w: 5, h: 2, name: 'sofa' }
       ]
+    },
+    cheesecake: {
+      label: 'The Cheesecake Factory',
+      ground: '#8a5636', groundAlt: '#7a4a2d', edge: '#c99a63', edgeAlt: '#b3874f',
+      sky: '#c99a63', props: ['houseplant', 'floorlamp'],
+      edgeRows: 3, extras: 'cheesecake', density: 6, signText: 'THE CHEESECAKE FACTORY',
+      fixed: [
+        { c: 2, r: 4, w: 5, h: 3, name: 'booth' },
+        { c: 13, r: 4, w: 5, h: 3, name: 'booth' },
+        { c: 8, r: 10, w: 5, h: 2, name: 'dessertcase' }
+      ]
+    },
+    road: {
+      label: 'I-5 North \u2014 San Diego to Irvine',
+      ground: '#4a4a52', groundAlt: '#42424a', edge: '#3a3a42', edgeAlt: '#32323a',
+      sky: '#8fc4e8', props: [], edgeRows: 0, custom: 'road', signText: 'COTALITY IRVINE'
     }
   };
+
+  // Rows the traffic runs along; the rows between them are safe.
+  const ROAD_LANES = [3, 5, 7, 9, 11];
 
   // Deck bounds in tiles for the boat map (inclusive).
   const DECK = { c0: 4, c1: 15, r0: 4, r1: 12 };
@@ -340,6 +359,7 @@
     }
 
     if (theme.custom === 'boat') return buildBoat(theme, themeName, solid, props, seedStr, reserved);
+    if (theme.custom === 'road') return buildRoad(theme, themeName, solid, props, seedStr);
 
     // impassable border band
     for (let c = 0; c < COLS; c++) {
@@ -387,8 +407,80 @@
     return map;
   }
 
-  /** The boat deck is hand-authored instead of scattered, so it reads as a vessel. */
-  function buildBoat(theme, themeName, solid, props, seedStr, reserved) {
+  /** Straight highway: office wall at the top, open asphalt, sidewalk at the bottom. */
+  function buildRoad(theme, themeName, solid, props, seedStr) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        solid[r][c] = (r <= 1) || (r === ROWS - 1) || c === 0 || c === COLS - 1;
+      }
+    }
+    const map = {
+      theme, themeName, solid, props, cols: COLS, rows: ROWS, tile: T, width: W, height: H,
+      lanes: ROAD_LANES, rnd: mulberry32(hashString((seedStr || '') + 'road'))
+    };
+    map.background = paintRoad(map);
+    return map;
+  }
+
+  function paintRoad(map) {
+    const { canvas, ctx } = Sprites.newCanvas(W, H);
+    const rnd = map.rnd;
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const roadTop = 2 * T, roadBottom = 13 * T;
+
+    // sky behind the office
+    fill(0, 0, W, roadTop, '#8fc4e8');
+    for (let i = 0; i < 10; i++) fill(Math.floor(rnd() * W), Math.floor(rnd() * 10), 8 + Math.floor(rnd() * 10), 2, '#c9e6f5');
+
+    // Cotality Irvine office facade
+    fill(0, 6, W, roadTop - 6, '#5b6b7d');
+    fill(0, 6, W, 3, '#7d8fa3');
+    for (let x = 6; x < W - 6; x += 14) {
+      fill(x, 12, 9, 10, '#3fd0c8');
+      fill(x, 12, 9, 3, '#7ce8e0');
+    }
+    fill(0, roadTop - 4, W, 4, '#3f4a57');
+    // entrance
+    fill(132, 10, 56, roadTop - 14, '#2b3440');
+    fill(136, 14, 48, roadTop - 20, '#4bd0c8');
+    fill(132, roadTop - 6, 56, 6, '#8d8794');
+    const sign = map.theme.signText || 'COTALITY IRVINE';
+    const tw = textWidth(sign, 1);
+    drawText(ctx, sign, Math.round((W - tw) / 2), 1, 1, '#fff7c9');
+
+    // asphalt
+    fill(0, roadTop, W, roadBottom - roadTop, '#4a4a52');
+    for (let i = 0; i < 160; i++) {
+      fill(Math.floor(rnd() * W), roadTop + Math.floor(rnd() * (roadBottom - roadTop)), 2, 1, rnd() < 0.5 ? '#42424a' : '#53535c');
+    }
+
+    // lane dashes between each traffic lane
+    ROAD_LANES.forEach(lane => {
+      const y = lane * T - 2;
+      for (let x = 4; x < W - 4; x += 16) fill(x, y, 9, 2, '#d9d5c4');
+    });
+    // solid shoulder lines
+    fill(T, roadTop, 2, roadBottom - roadTop, '#e8e07a');
+    fill(W - T - 2, roadTop, 2, roadBottom - roadTop, '#e8e07a');
+
+    // barriers along both shoulders
+    for (let y = roadTop; y < roadBottom; y += 8) {
+      fill(2, y, 12, 6, '#b9b4c4');
+      fill(2, y + 4, 12, 2, '#8d8794');
+      fill(W - 14, y, 12, 6, '#b9b4c4');
+      fill(W - 14, y + 4, 12, 2, '#8d8794');
+    }
+
+    // sidewalk / start line
+    fill(0, roadBottom, W, H - roadBottom, '#9a9aa2');
+    fill(0, roadBottom, W, 3, '#b9b4c4');
+    for (let x = 0; x < W; x += 16) fill(x, roadBottom + 3, 1, H - roadBottom - 3, '#84848c');
+    for (let x = 4; x < W - 4; x += 12) fill(x, roadBottom - 6, 6, 4, '#f2f2ef');
+
+    return canvas;
+  }
+
+  /** The boat deck is hand-authored instead of scattered, so it reads as a vessel. */  function buildBoat(theme, themeName, solid, props, seedStr, reserved) {
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) solid[r][c] = true;
     for (let r = DECK.r0; r <= DECK.r1; r++) for (let c = DECK.c0; c <= DECK.c1; c++) solid[r][c] = false;
 
@@ -533,6 +625,7 @@
     if (th.extras === 'park') paintPark(ctx, th, rnd);
     else if (th.extras === 'farm') paintFarm(ctx, th, rnd);
     else if (th.extras === 'coop') paintCoopHouse(ctx, th, rnd);
+    else if (th.extras === 'cheesecake') paintCheesecake(ctx, th, rnd);
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -895,6 +988,86 @@
     fill(w - 16, -4, 7, 6, '#c94a36');
   }
 
+  function paintCheesecake(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;
+
+    // brick wall
+    fill(0, 0, W, band, '#8a4a3a');
+    for (let row = 0; row < band; row += 6) {
+      const off = (row / 6) % 2 ? 12 : 0;
+      fill(0, row, W, 5, row % 12 ? '#8a4a3a' : '#7d4232');
+      for (let x = off; x < W; x += 24) fill(x, row, 1, 5, '#5e3226');
+    }
+
+    // string lights along the top
+    for (let x = 6; x < W - 6; x += 14) {
+      const sag = Math.round(Math.sin(x / 34) * 3);
+      fill(x, band - 8 + sag, 14, 1, '#3a2418');
+      fill(x + 5, band - 7 + sag, 3, 3, '#f7e07a');
+    }
+    ctx.fillStyle = 'rgba(247,224,122,0.10)';
+    ctx.fillRect(0, band - 12, W, 20);
+
+    const scale = 2;
+    const text = th.signText || 'THE CHEESECAKE FACTORY';
+    const tw = Math.min(W - 24, textWidth(text, scale));
+    drawText(ctx, text, Math.round((W - tw) / 2), 8, scale, '#f7e07a');
+
+    // warm checkered floor
+    for (let r = 0; r < ROWS; r++) {
+      const y = r * T;
+      if (y < band) continue;
+      for (let c = 0; c < COLS; c++) {
+        const x = c * T;
+        fill(x, y, T, T, (r + c) % 2 ? '#7a4a2d' : '#8a5636');
+      }
+    }
+    for (let i = 0; i < 30; i++) {
+      const x = T + Math.floor(rnd() * (W - T * 2));
+      const y = band + Math.floor(rnd() * (H - band - T));
+      fill(x, y, 3, 1, 'rgba(0,0,0,0.15)');
+    }
+
+    (th.fixed || []).forEach(f => {
+      const x = f.c * T, y = f.r * T, w = f.w * T, h = f.h * T;
+      if (f.name === 'booth') drawBooth(ctx, x, y, w, h);
+      if (f.name === 'dessertcase') drawDessertCase(ctx, x, y, w, h);
+    });
+
+    // hanging pendant lamps over the middle of the floor
+    [96, 160, 224].forEach(px2 => {
+      fill(px2 - 1, band, 2, 10, '#3a2418');
+      fill(px2 - 5, band + 10, 10, 6, '#c94a36');
+      fill(px2 - 3, band + 12, 6, 3, '#f7e07a');
+    });
+  }
+
+  function drawBooth(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 0, w, h, '#6b1f2b');                    // vinyl bench back
+    fill(2, 2, w - 4, h - 10, '#8a2a38');
+    fill(0, h - 8, w, 8, '#4a1520');                 // bench seat shadow
+    const tableX = Math.round(w / 2) - 8;
+    fill(tableX, h - 4, 16, 10, '#6b4a2a');          // little table
+    fill(tableX + 1, h - 4, 14, 2, '#8a6b4a');
+    fill(tableX + 5, h - 9, 6, 4, '#f7f2ea');        // plate of cheesecake
+    fill(tableX + 6, h - 8, 4, 2, '#e8c94a');
+  }
+
+  function drawDessertCase(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 4, w, h - 4, '#8d8794');                 // base
+    fill(2, -8, w - 4, 12, '#cfe8f2');                // glass case
+    fill(3, -7, w - 6, 10, 'rgba(207,232,242,0.55)');
+    for (let i = 0; i < 4; i++) {
+      const cx = 4 + i * ((w - 8) / 4);
+      fill(cx, -3, 6, 4, ['#e8c94a', '#c94a36', '#7a4fc0', '#f7e07a'][i]);
+      fill(cx, -5, 6, 2, '#f7f2ea');
+    }
+    fill(2, 4, w - 4, 2, '#5b5468');
+  }
+
   function isSolidPixel(map, x, y) {
     const c = Math.floor(x / T), r = Math.floor(y / T);
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return true;
@@ -909,5 +1082,5 @@
     return out;
   }
 
-  global.World = { T, COLS, ROWS, W, H, THEMES, DECK, createMap, isSolidPixel, freeCells, drawProp, mulberry32, hashString };
+  global.World = { T, COLS, ROWS, W, H, THEMES, DECK, ROAD_LANES, createMap, isSolidPixel, freeCells, drawProp, mulberry32, hashString };
 })(window);

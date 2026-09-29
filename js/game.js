@@ -54,6 +54,21 @@
       scannerTried: false,
       melon: null,
       melonCooldown: 0,
+      hazards: (mission.hazards || []).map(hz => ({
+        kind: hz.kind, name: hz.name, speed: hz.speed, damage: hz.damage, hitMsg: hz.hitMsg,
+        x: hz.x, y: hz.y, vx: 0, vy: 0, wander: 0, anim: 0, frame: 0, cooldown: 0
+      })),
+      lawson: mission.lawson ? Object.assign({ count: 0, finished: false, dir: 'down' }, mission.lawson) : null,
+      chaser: mission.chaserStart ? Object.assign({ active: false, cooldown: 0, anim: 0, frame: 0, dir: 'down' }, mission.chaserStart) : null,
+      focus: 100,
+      hazardHits: 0,
+      traffic: buildTraffic(mission),
+      seenJokes: new Set(),
+      hitGrace: 0,
+      waveShown: false,
+      waveStart: 0,
+      waveUntil: 0,
+      boss: null,
       puffs: [],
       dialogueQueue: [],
       typed: 0,
@@ -222,6 +237,10 @@
       const d = Math.hypot(n.x + 8 - f.x, n.y + 10 - f.y);
       if (d < 14 && (!best || d < best.d)) best = { d, type: 'npc', npc: n };
     }
+    if (state.lawson && !state.lawson.finished) {
+      const d = Math.hypot(state.lawson.x + 8 - f.x, state.lawson.y + 10 - f.y);
+      if (d < 14 && (!best || d < best.d)) best = { d, type: 'lawson' };
+    }
     for (const ch of state.chickens) {
       if (ch.caught) continue;
       const d = Math.hypot(ch.x + 8 - f.x, ch.y + 10 - f.y);
@@ -250,8 +269,12 @@
       return;
     }
     if (target.type === 'npc') talkTo(target.npc);
+    else if (target.type === 'lawson') talkLawson();
     else if (target.type === 'chicken') catchChicken(target.chicken);
-    else if (target.type === 'pickup') pickUp(target.pickup);
+    else if (target.type === 'pickup') {
+      if (state.mission.finale === 'bikecommute') declineDistraction(target.pickup);
+      else pickUp(target.pickup);
+    }
     else takeItem();
   }
 
@@ -571,14 +594,14 @@
       return;
     }
     state.itemTaken = true;
-    queueScript(m.grantedLines || ['COOP-SEC v2.1: ACCESS GRANTED.'], () => enterCoop());
+    queueScript(m.grantedLines || ['COOP-SEC v2.1: ACCESS GRANTED.'], () => enterParty(m.partyTheme || 'coophouse'));
   }
 
-  function enterCoop() {
+  function enterParty(themeName) {
     const m = state.mission;
     const guests = (m.party && m.party.guests) || [];
     state.interior = true;
-    state.map = World.createMap('coophouse', m.missionId + '-inside',
+    state.map = World.createMap(themeName, m.missionId + '-inside',
       [{ c: 10, r: 12 }, { c: 10, r: 11 }].concat(guests.map(g => ({ c: g.c, r: g.r }))));
     state.player.x = 10 * T;
     state.player.y = 11 * T;
@@ -643,9 +666,452 @@
     [9, 7, 5, 3, 1].forEach((w, i) => ctx.fillRect(cx - (w - 1) / 2, top + i + 2, w, 1));
   }
 
+  // ------------------------------------------------------------ bike commute
+  const KNOCKBACK_GRACE = 900;
+
+  function buildTraffic(mission) {
+    const out = [];
+    (mission.traffic || []).forEach(t => {
+      for (let i = 0; i < t.count; i++) {
+        out.push({
+          kind: t.kind, name: t.name, joke: t.joke,
+          y: t.lane * T,
+          x: (World.W / t.count) * i + (t.dir > 0 ? 0 : 40),
+          dir: t.dir, speed: t.speed
+        });
+      }
+    });
+    return out;
+  }
+
+  function jokesTotal() {
+    const kinds = new Set((state.mission.traffic || []).map(t => t.kind));
+    return kinds.size;
+  }
+
+  // Only traffic counts toward the quota; the chaser has its own one-off line.
+  function jokesHeard() {
+    let n = 0;
+    new Set((state.mission.traffic || []).map(t => t.kind))
+      .forEach(k => { if (state.seenJokes.has(k)) n++; });
+    return n;
+  }
+
+  function updateTraffic(dt) {
+    const step = dt / 16.666;
+    for (const car of state.traffic) {
+      car.x += car.dir * car.speed * step;
+      if (car.x < -24) car.x = World.W + 8;
+      if (car.x > World.W + 24) car.x = -8;
+    }
+    if (state.hitGrace > 0) { state.hitGrace -= dt; return; }
+
+    const px = state.player.x + 4, py = state.player.y + 6;
+    for (const car of state.traffic) {
+      if (px + 8 < car.x + 2 || px > car.x + 14 || py + 8 < car.y + 2 || py > car.y + 14) continue;
+      hitByTraffic(car);
+      return;
+    }
+  }
+
+  function hitByTraffic(car) {
+    state.hitGrace = KNOCKBACK_GRACE;
+    state.hazardHits++;
+    sendToStart();
+    if (!state.seenJokes.has(car.kind)) {
+      state.seenJokes.add(car.kind);
+      renderHud();
+      const left = jokesTotal() - jokesHeard();
+      queueScript([car.joke].concat(left > 0
+        ? ['Rob: Knocked back to the on-ramp. ' + left + ' more excuse' + (left === 1 ? '' : 's') + ' still out there.']
+        : ['Rob: That is all five. The badge reader should let me in now \u2014 ride to the top.']));
+    } else {
+      toast(car.name + ' again. Back to the on-ramp.', 1800);
+    }
+    renderHud();
+  }
+
+  function sendToStart() {
+    state.player.x = state.mission.heroSpawn.x;
+    state.player.y = state.mission.heroSpawn.y;
+    state.player.dir = 'up';
+    state.trail = [];
+  }
+
+  function drawRideHud(ctx) {
+    const total = jokesTotal();
+    meter(ctx, 8, 6, 84, 8, total ? jokesHeard() / total : 0, '#4bd0c8', '');
+    ctx.font = '7px monospace';
+    ctx.fillStyle = '#fff7c9';
+    ctx.fillText('EXCUSES ' + jokesHeard() + '/' + total, 12, 13);
+    if (state.hitGrace > 0) {
+      ctx.fillStyle = 'rgba(224,85,63,0.16)';
+      ctx.fillRect(0, 0, World.W, World.H);
+    }
+  }
+
+  function talkLawson() {
+    const L = state.lawson;
+    L.count++;
+    const idx = Math.min(L.count - 1, L.appearances.length - 1);
+    const lines = L.appearances[idx].slice();
+    const done = L.count >= L.times;
+    if (done) L.finished = true;
+    queueScript(lines, () => { if (done) maybeStartWave(); else relocateLawson(); });
+    renderHud();
+  }
+
+  function relocateLawson() {
+    const L = state.lawson;
+    const cells = World.freeCells(state.map).filter(cell => {
+      const x = cell.c * T, y = cell.r * T;
+      return Math.hypot(x - state.player.x, y - state.player.y) > 60;
+    });
+    if (!cells.length) return;
+    const pick = cells[Math.floor(Math.random() * cells.length)];
+    L.c = pick.c; L.r = pick.r; L.x = pick.c * T; L.y = pick.r * T;
+  }
+
+  function updateHazards(dt) {
+    for (const hz of state.hazards) {
+      hz.wander -= dt;
+      if (hz.wander <= 0) {
+        hz.wander = 500 + Math.random() * 900;
+        const ang = Math.random() * Math.PI * 2;
+        hz.vx = Math.cos(ang); hz.vy = Math.sin(ang);
+      }
+      const step = hz.speed * (dt / 16.666);
+      const nx = hz.x + hz.vx * step, ny = hz.y + hz.vy * step;
+      if (chickenFree(nx, hz.y)) hz.x = nx; else hz.vx = -hz.vx;
+      if (chickenFree(hz.x, ny)) hz.y = ny; else hz.vy = -hz.vy;
+      hz.x = Math.max(T, Math.min(World.W - T * 2, hz.x));
+      hz.y = Math.max(T * 2, Math.min(World.H - T * 2, hz.y));
+      hz.anim += dt; hz.frame = Math.floor(hz.anim / 140) % 4;
+
+      if (hz.cooldown > 0) { hz.cooldown -= dt; continue; }
+      const d = Math.hypot((state.player.x + 8) - (hz.x + 8), (state.player.y + 10) - (hz.y + 8));
+      if (d < 13) {
+        state.focus = Math.max(0, state.focus - hz.damage);
+        state.hazardHits++;
+        hz.cooldown = 1500;
+        toast(hz.hitMsg || (hz.name + ' got you. Focus dropping.'));
+      }
+    }
+  }
+
+  function updateChaser(dt) {
+    const ch = state.chaser;
+    if (!ch) return;
+    if (!ch.active) {
+      const ready = state.traffic.length
+        ? jokesHeard() >= ch.triggerAfter
+        : collectiblesLeft() <= ch.triggerAfter;
+      if (ready) {
+        ch.active = true;
+        ch.x = World.W / 2 - 8;
+        ch.y = World.H - 40;
+        toast(ch.who
+          ? ch.name + ' has spotted you. He is following you up the road.'
+          : ch.name + ' has spotted you. It is following you up the road.', 3200);
+      }
+      return;
+    }
+    const dx = state.player.x - ch.x, dy = state.player.y - ch.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const step = ch.speed * (dt / 16.666);
+    ch.x += (dx / d) * step; ch.y += (dy / d) * step;
+    ch.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+    ch.anim += dt; ch.frame = Math.floor(ch.anim / 160) % 4;
+    if (ch.cooldown > 0) { ch.cooldown -= dt; return; }
+    if (d < 15) {
+      ch.cooldown = 2600;
+      state.hazardHits++;
+      sendToStart();
+      ch.x = World.W / 2 - 8; ch.y = World.H - 40;
+      if (!state.seenJokes.has('chaser')) {
+        state.seenJokes.add('chaser');
+        queueScript(ch.lines || [
+          'THE TRIPLE-BOOKED DAY: THREE MEETINGS. SAME SLOT. ALL MANDATORY.',
+          'Rob: It does not even want anything. It just wants me to be in three places.'
+        ]);
+      } else {
+        toast(ch.name + ' caught you. Back to the on-ramp.', 1800);
+      }
+    }
+  }
+
+  function drawChaser(ctx, ch, now) {
+    const bob = Math.round(Math.sin(now / 200) * 2);
+    const x = Math.round(ch.x), y = Math.round(ch.y) + bob;
+    ctx.fillStyle = 'rgba(224,85,63,0.25)';
+    ctx.beginPath(); ctx.ellipse(x + 8, y + 16, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
+
+    if (ch.look) {
+      Sprites.draw(ctx, ch.look, x, y, ch.dir, ch.frame);
+      // the card he keeps waving
+      const cx2 = x + (ch.dir === 'left' ? -4 : 14), cy2 = y + 6;
+      ctx.fillStyle = '#3f7fd0'; ctx.fillRect(cx2, cy2, 7, 5);
+      ctx.fillStyle = '#241f30'; ctx.fillRect(cx2, cy2 + 2, 7, 1);
+      ctx.fillStyle = '#e8c94a'; ctx.fillRect(cx2 + 5, cy2 + 3, 2, 1);
+      drawMark(ctx, x + 8, y - 6, 'bang');
+      return;
+    }
+
+    const px2 = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, w, h); };
+    px2(-4, -2, 24, 20, '#f7f2ea');
+    px2(-4, -2, 24, 5, '#c94a36');
+    px2(-2, -6, 2, 5, '#8d8794'); px2(18, -6, 2, 5, '#8d8794');
+    px2(0, 6, 4, 4, '#4b8fd0'); px2(6, 6, 4, 4, '#e0553f'); px2(12, 6, 4, 4, '#4b8fd0');
+    px2(0, 12, 4, 4, '#e0553f'); px2(6, 12, 4, 4, '#4b8fd0'); px2(12, 12, 4, 4, '#e0553f');
+    px2(2, 8, 1, 1, '#1a1220'); px2(15, 8, 1, 1, '#1a1220');
+    drawMark(ctx, x + 8, y - 8, 'bang');
+  }
+
+  function bikeReady() {
+    if (state.traffic.length) return jokesHeard() >= jokesTotal();
+    return collectiblesLeft() === 0 && (!state.lawson || state.lawson.finished);
+  }
+
+  function declineDistraction(item) {
+    item.taken = true;
+    state.collected++;
+    renderHud();
+    queueDialogue(state.mission.hero, state.mission.heroLook, [
+      item.found || ('Declined ' + item.label + '.')
+    ], () => maybeStartWave());
+  }
+
+  function maybeStartWave() {
+    if (state.waveShown || !bikeReady()) return;
+    state.waveShown = true;
+    startWave();
+  }
+
+  function startWave() {
+    state.mode = 'wave';
+    state.waveStart = performance.now();
+    state.waveUntil = state.waveStart + 3400;
+    const lines = (state.mission.waveCutscene && state.mission.waveCutscene.lines) || [
+      'John Lawson: Wait! One more thing before you go!'
+    ];
+    toast(lines[0], 3300);
+  }
+
+  function drawWaveScene(ctx, now) {
+    const t = Math.min(1, (now - state.waveStart) / 3400);
+    ctx.fillStyle = '#1f6a97';
+    ctx.fillRect(0, 0, World.W, World.H);
+    for (let i = 0; i < 5; i++) {
+      const yy = 40 + i * 34 + Math.sin(now / 260 + i) * 6;
+      ctx.fillStyle = i % 2 ? '#2b7fb0' : '#3fa6d1';
+      ctx.fillRect(0, yy, World.W, 18);
+    }
+    const wx = -60 + t * (World.W + 160);
+    ctx.fillStyle = '#f2f2ef';
+    ctx.beginPath();
+    ctx.moveTo(wx - 50, World.H);
+    ctx.quadraticCurveTo(wx, World.H - 140, wx + 50, World.H);
+    ctx.fill();
+    Sprites.draw(ctx, Roster.lookAt('John Lawson', 'human'), wx - 8, World.H - 96, 'right', Math.floor(now / 130) % 4);
+    ctx.fillStyle = '#f7f2ea';
+    ctx.fillRect(wx + 6, World.H - 92, 8, 10);
+    ctx.fillStyle = '#8d8794';
+    ctx.fillRect(wx + 7, World.H - 90, 6, 1); ctx.fillRect(wx + 7, World.H - 87, 6, 1);
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff7c9';
+    ctx.fillText('POLICY REVIEW REQUESTS INCOMING', World.W / 2, 20);
+    ctx.textAlign = 'left';
+  }
+
+  function useOfficeDoor() {
+    const m = state.mission;
+    if (!bikeReady()) {
+      const left = jokesTotal() - jokesHeard();
+      queueScript([
+        'BADGE READER: ACCESS HELD. DAILY CORPORATE FRICTION QUOTA NOT MET.',
+        'BADGE READER: EXCUSES ABSORBED: ' + jokesHeard() + ' OF ' + jokesTotal() + '.',
+        'Rob: You want me to go get hit by ' + left + ' more thing' + (left === 1 ? '' : 's') + ' before you let me film a security video. Incredible.'
+      ]);
+      return;
+    }
+    queueScript(m.grantedLines || ['Rob: Focus time. Let\u2019s do this.'], () => startBossFight());
+  }
+
+  function startBossFight() {
+    state.mode = 'boss';
+    const b = state.mission.boss || {};
+    state.boss = {
+      progress: 0, strain: 0, pull: 1, pullTimer: 0,
+      message: b.hint || 'HOLD to keep declining. Ease off before you cave and hand over the card!',
+      messageUntil: performance.now() + 3600,
+      shake: 0
+    };
+  }
+
+  function tickBoss(dt) {
+    const b = state.boss;
+    b.pullTimer -= dt;
+    if (b.pullTimer <= 0) {
+      b.pull = 0.6 + Math.random() * 1.1;
+      b.pullTimer = 700 + Math.random() * 900;
+    }
+    if (state.holding) {
+      b.progress += REEL_RATE * dt;
+      b.strain += STRAIN_UP * b.pull * dt;
+    } else {
+      b.progress -= SLIP_RATE * dt;
+      b.strain -= STRAIN_DOWN * dt;
+    }
+    b.strain = Math.max(0, b.strain);
+    b.progress = Math.max(0, b.progress);
+    if (b.shake > 0) b.shake -= dt;
+
+    if (b.strain >= 100) {
+      b.strain = 0;
+      b.progress = Math.max(0, b.progress - 18);
+      b.shake = 260;
+      b.message = 'YOU ALMOST SAID YES! Ease off for a second!';
+      b.messageUntil = performance.now() + 1500;
+    }
+    if (b.progress >= 100) defeatBoss();
+  }
+
+  function defeatBoss() {
+    state.mode = 'roam';
+    state.boss = null;
+    state.itemTaken = true;
+    renderHud();
+    const m = state.mission;
+    queueScript((m.boss && m.boss.defeatLines) || ['Rob: Declined. All of it. The Triple-Booked Day has been defeated.'],
+      () => enterParty(m.partyTheme || 'cheesecake'));
+  }
+
+  function drawBossScene(ctx, now) {
+    const b = state.boss;
+    const shake = b.shake > 0 ? Math.round(Math.sin(now / 22) * 2) : 0;
+    const cfg = state.mission.boss || {};
+
+    ctx.fillStyle = 'rgba(14,8,22,0.88)';
+    ctx.fillRect(0, 0, World.W, World.H);
+
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    const title = (cfg.title || 'THE TRIPLE-BOOKED DAY').toUpperCase();
+    const tw = ctx.measureText(title).width;
+    ctx.fillStyle = '#e0553f';
+    ctx.fillRect(World.W / 2 - tw / 2 - 7, 12, tw + 14, 14);
+    ctx.fillStyle = '#1a1220';
+    ctx.fillRect(World.W / 2 - tw / 2 - 5, 14, tw + 10, 10);
+    ctx.fillStyle = '#ffd9d2';
+    ctx.fillText(title, World.W / 2, 22);
+    ctx.textAlign = 'left';
+
+    if (cfg.who) drawCardBoss(ctx, World.W / 2 + shake, 58, b.progress / 100, now, cfg.who);
+    else drawTripleBooked(ctx, World.W / 2 + shake, 104, b.progress / 100, now);
+
+    bossMeter(ctx, 24, 176, World.W - 48, 9, b.progress / 100, '#4bd0c8', 'DECLINE');
+    bossMeter(ctx, 24, 197, World.W - 48, 9, Math.min(1, b.strain / 100),
+      b.strain > 70 ? '#e0553f' : '#f7e07a', cfg.strainLabel || 'RESOLVE');
+
+    const msg = (now < b.messageUntil ? b.message : (state.holding ? 'DECLINING...' : (cfg.idle || 'YOU ARE WAVERING \u2014 HE CAN SENSE IT!'))).toUpperCase();
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    const mw = ctx.measureText(msg).width;
+    ctx.fillStyle = '#1a1220';
+    ctx.fillRect(World.W / 2 - mw / 2 - 6, 211, mw + 12, 13);
+    ctx.fillStyle = now < b.messageUntil ? '#ffe9a8' : '#e8e2f5';
+    ctx.fillText(msg, World.W / 2, 220);
+    ctx.textAlign = 'left';
+  }
+
+  /** Label sits above the bar in light text so it stays readable on the dark overlay. */
+  function bossMeter(ctx, x, y, w, h, pct, color, label) {
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1a1220';
+    ctx.fillRect(x - 2, y - 11, ctx.measureText(label).width + 8, 10);
+    ctx.fillStyle = '#f2f2ef';
+    ctx.fillText(label, x + 2, y - 3);
+    ctx.fillStyle = '#1a1220';
+    ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+    ctx.fillStyle = '#3a3350';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, Math.max(0, Math.min(1, pct)) * w, h);
+  }
+
+  /** The boss is a person waving escalating requests that go dark as you decline them. */
+  function drawCardBoss(ctx, cx, cy, progress, now, who) {
+    const look = Roster.lookAt(who, 'human');
+    const scale = 5;
+    const bob = Math.round(Math.sin(now / 300) * 2);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(cx - (16 * scale) / 2), Math.round(cy + bob));
+    ctx.scale(scale, scale);
+    Sprites.draw(ctx, look, 0, 0, 'down', Math.floor(now / 180) % 4);
+    ctx.restore();
+
+    const cards = [
+      { dx: -52, dy: 14, beat: progress >= 1 / 3 },
+      { dx: 44, dy: 2, beat: progress >= 2 / 3 },
+      { dx: -46, dy: 62, beat: progress >= 1 }
+    ];
+    cards.forEach((c, i) => {
+      const wob = Math.round(Math.sin(now / 220 + i * 2) * (c.beat ? 0 : 2));
+      const x = Math.round(cx + c.dx), y = Math.round(cy + c.dy) + wob;
+      ctx.fillStyle = c.beat ? '#3a3646' : '#3f7fd0';
+      ctx.fillRect(x, y, 26, 17);
+      ctx.fillStyle = c.beat ? '#2b2833' : '#2f6a9c';
+      ctx.fillRect(x, y, 26, 4);
+      ctx.fillStyle = c.beat ? '#2b2833' : '#241f30';
+      ctx.fillRect(x, y + 6, 26, 4);
+      ctx.fillStyle = c.beat ? '#4a4550' : '#e8c94a';
+      ctx.fillRect(x + 18, y + 12, 6, 3);
+      if (c.beat) {
+        ctx.fillStyle = '#e0553f';
+        ctx.fillRect(x + 2, y + 2, 22, 2);
+      }
+    });
+  }
+
+  function drawTripleBooked(ctx, cx, cy, progress, now) {
+    const heads = [
+      { dx: -34, dy: 6, beat: progress >= 1 / 3 },
+      { dx: 0, dy: -8, beat: progress >= 2 / 3 },
+      { dx: 34, dy: 6, beat: progress >= 1 }
+    ];
+    ctx.fillStyle = '#2b2333';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 34, 74, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    heads.forEach((h, i) => {
+      const wob = Math.round(Math.sin(now / 240 + i * 2) * (h.beat ? 1 : 3));
+      const x = Math.round(cx + h.dx) - 16, y = Math.round(cy + h.dy) + wob;
+      const face = h.beat ? '#5b5468' : '#f7f2ea';
+      const band = h.beat ? '#3a3646' : '#c94a36';
+      ctx.fillStyle = band; ctx.fillRect(x, y, 32, 9);
+      ctx.fillStyle = face; ctx.fillRect(x, y + 9, 32, 26);
+      ctx.fillStyle = h.beat ? '#3a3646' : '#8d8794';
+      for (let gx = 0; gx < 4; gx++) for (let gy = 0; gy < 3; gy++) ctx.fillRect(x + 3 + gx * 7, y + 13 + gy * 7, 5, 5);
+      if (!h.beat) {
+        ctx.fillStyle = '#1a1220';
+        ctx.fillRect(x + 9, y + 15, 3, 3); ctx.fillRect(x + 20, y + 15, 3, 3);
+        ctx.fillRect(x + 10, y + 27, 12, 2);
+      } else {
+        ctx.fillStyle = '#8d8794';
+        ctx.fillRect(x + 8, y + 18, 5, 1); ctx.fillRect(x + 19, y + 18, 5, 1);
+        ctx.fillRect(x + 12, y + 28, 8, 1);
+      }
+    });
+  }
+
   function takeItem() {
     if (state.mission.finale === 'fishing') { startFishing(); return; }
     if (state.mission.finale === 'passkey') { useScanner(); return; }
+    if (state.mission.finale === 'bikecommute') { useOfficeDoor(); return; }
     state.itemTaken = true;
     state.mode = 'roam';
     queueDialogue(state.mission.hero, state.mission.heroLook, [
@@ -992,7 +1458,7 @@
   function win() {
     state.mode = 'win';
     const seconds = Math.round((performance.now() - state.startedAt) / 1000);
-    const score = Math.max(100, 1000 - seconds * 5 - state.wrongAnswers * 60 - state.hintsUsed * 40);
+    const score = Math.max(100, 1000 - seconds * 5 - state.wrongAnswers * 60 - state.hintsUsed * 40 - (state.hazardHits || 0) * 15);
     const result = {
       missionId: state.mission.missionId,
       title: state.mission.title,
@@ -1014,6 +1480,12 @@
     let step;
     if (state.interior) step = 'You are in. Behave yourself.';
     else if (state.itemTaken) step = m.trivia ? 'Answer the riddle to close the ticket.' : 'Head home, hero.';
+    else if (state.mission.finale === 'bikecommute') {
+      if (state.mode === 'boss') step = 'Mash Space to keep declining. Do not cave!';
+      else if (state.mode === 'wave') step = 'Brace for impact...';
+      else if (!bikeReady()) step = 'Ride UP the road \u00b7 get hit by each thing to hear its excuse \u00b7 ' + jokesHeard() + '/' + jokesTotal();
+      else step = 'All excuses heard! Ride to the top and badge in.';
+    }
     else if (state.mission.finale === 'passkey') {
       step = !state.scannerTried
         ? 'Try the biometric scanner on the coop door.'
@@ -1047,6 +1519,11 @@
         drawWaypoint(ctx, m.item.x, m.item.y, now);
       }
     }
+    if (m.finale === 'bikecommute' && !state.itemTaken && bikeReady()) {
+      if (Math.hypot(state.player.x - m.item.x, state.player.y - m.item.y) > 34) {
+        drawWaypoint(ctx, m.item.x, m.item.y, now);
+      }
+    }
     state.collectibles.forEach(it => {
       if (!it.taken && !it.buried) Missions.drawItem(ctx, it.kind, it.x, it.y, now);
     });
@@ -1061,7 +1538,23 @@
         draw: () => drawActor(ctx, pet.look, pet.x, pet.y, pet.dir, pet.frame, state.petBubble > 0 ? 'bark' : null)
       }));
     }
-    actors.push({ y: state.player.y, draw: () => drawActor(ctx, m.heroLook, state.player.x, state.player.y, state.player.dir, state.player.frame, null) });
+    if (!state.interior) {
+      state.hazards.forEach(hz => actors.push({ y: hz.y, draw: () => Missions.drawItem(ctx, hz.kind, hz.x, hz.y, now) }));
+      state.traffic.forEach(car => actors.push({ y: car.y, draw: () => Missions.drawItem(ctx, car.kind, Math.round(car.x), Math.round(car.y), now) }));
+      if (state.chaser && state.chaser.active) {
+        actors.push({ y: state.chaser.y, draw: () => drawChaser(ctx, state.chaser, now) });
+      }
+    }
+    if (state.lawson && !state.lawson.finished) {
+      actors.push({ y: state.lawson.y, draw: () => drawActor(ctx, state.lawson.look, state.lawson.x, state.lawson.y, state.lawson.dir, 0, 'bang') });
+    }
+    actors.push({
+      y: state.player.y,
+      draw: () => {
+        if (m.finale === 'bikecommute' && !state.interior) drawRider(ctx, m.heroLook, state.player);
+        else drawActor(ctx, m.heroLook, state.player.x, state.player.y, state.player.dir, state.player.frame, null);
+      }
+    });
     actors.sort((a, b) => a.y - b.y).forEach(a => a.draw());
     drawPuffs(ctx);
 
@@ -1071,9 +1564,11 @@
       const target = nearestTarget();
       if (target) {
         if (target.type === 'npc') prompt = 'Talk to ' + target.npc.name;
+        else if (target.type === 'lawson') prompt = 'Talk to ' + state.lawson.name;
         else if (target.type === 'chicken') prompt = 'Grab the waiver from ' + target.chicken.name;
-        else if (target.type === 'pickup') prompt = 'Pick up ' + target.pickup.label;
+        else if (target.type === 'pickup') prompt = (m.finale === 'bikecommute' ? 'Decline ' : 'Pick up ') + target.pickup.label;
         else if (m.finale === 'passkey') prompt = collectiblesLeft() ? 'Try the biometric scanner' : 'Enroll paw print authentication';
+        else if (m.finale === 'bikecommute') prompt = bikeReady() ? 'Clock in and film 60 Seconds of Cyber' : 'Try the door anyway';
         else prompt = m.finale === 'fishing' ? 'Grab the rod and fight the fish' : 'Grab ' + m.item.label;
       }
     }
@@ -1089,6 +1584,9 @@
     ctx.fillRect(0, World.H - 2, World.W, 2);
 
     if (state.mode === 'fishing') drawFishing(ctx, now);
+    if (state.mode === 'wave') drawWaveScene(ctx, now);
+    if (state.mode === 'boss') drawBossScene(ctx, now);
+    if (state.mission.finale === 'bikecommute' && state.mode === 'roam' && !state.interior) drawRideHud(ctx);
     drawScent(ctx, now);
   }
 
@@ -1099,6 +1597,16 @@
     ctx.fill();
     Sprites.draw(ctx, look, x, y, dir, frame);
     if (mark) drawMark(ctx, x + 8, y - 4, mark);
+  }
+
+  /** Rider sits a few pixels above the frame so the bike reads underneath. */
+  function drawRider(ctx, look, p) {
+    ctx.fillStyle = 'rgba(20,12,30,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(p.x + 8, p.y + 16, 6, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    Sprites.drawBike(ctx, p.x, p.y, p.dir, p.frame, { frame: '#c94a36' });
+    Sprites.draw(ctx, look, p.x, p.y - 4, p.dir, p.frame);
   }
 
   /** Hand-placed pixels beat canvas text at this resolution. */
@@ -1127,8 +1635,13 @@
     if (state.mode === 'roam') { move(dt); followPet(dt); }
     else { state.player.frame = 0; }
     if (state.chickens.length) updateChickens(state.mode === 'roam' ? dt : 0, now);
+    if (state.hazards.length && state.mode === 'roam') updateHazards(dt);
+    if (state.traffic.length && state.mode === 'roam' && !state.interior) updateTraffic(dt);
+    if (state.chaser && state.mode === 'roam') updateChaser(dt);
     updatePuffs(dt, now);
     if (state.mode === 'fishing') tickFishing(dt);
+    if (state.mode === 'boss') tickBoss(dt);
+    if (state.mode === 'wave' && now > state.waveUntil) { state.mode = 'roam'; toast('Head to the office and clock in.', 3500); }
     if (state.petBubble > 0) state.petBubble -= dt;
     tickText(dt);
 

@@ -129,6 +129,93 @@
         ]
       },
       outro: 'Consent filed in Saviynt, paw prints enrolled, and two dogs are now permanent residents of the nicest coop in the county.'
+    },
+    {
+      missionId: 'ep-05-epic-bike-commute',
+      title: 'Operation: The Epic Bike Commute',
+      hero: 'Rob',
+      objective: 'Ride I-5 north to the Irvine office and film this month\u2019s 60 Seconds of Cyber!',
+      theme: 'road',
+      finale: 'bikecommute',
+      reward: 'Survived Another Day in Security Leadership',
+      item: { kind: 'badge', name: 'the office badge reader', c: 9, r: 1 },
+      dialogue: [
+        'Rob: San Diego to Irvine. On a bike. Because the 60 Seconds of Cyber video films in the Irvine office and I said I would be there.',
+        'Rob: Ride UP the road with the arrow keys. The traffic is not cars. The traffic is my job.',
+        'Rob: And apparently the badge reader will not let me in until I have absorbed the full daily quota of corporate nonsense. So: go get hit by all five.'
+      ],
+      startHint: 'Ride UP with arrows/WASD. Get hit by each kind of traffic once to hear its excuse \u2014 you need all 5 to badge in.',
+      traffic: [
+        {
+          kind: 'calendar', name: 'Calendar Invite', lane: 11, speed: 0.55, dir: -1, count: 2,
+          joke: 'Rob: A calendar invite, double-booked straight over the ride I announced in three channels. Accepted on my behalf, naturally.'
+        },
+        {
+          kind: 'teams', name: 'Teams Message', lane: 9, speed: 0.8, dir: 1, count: 2,
+          joke: 'Rob: "Got a minute?" I am on a bicycle. On a freeway. Visibly. No, I do not have a minute.'
+        },
+        {
+          kind: 'budget', name: 'Budget Request', lane: 7, speed: 0.5, dir: -1, count: 2,
+          joke: 'Rob: A budget request routed to me because I once replied to a thread about a printer in 2019.'
+        },
+        {
+          kind: 'triplebooked', name: 'The Triple-Booked Day', lane: 5, speed: 0.85, dir: 1, count: 2,
+          joke: 'Rob: The Triple-Booked Day. Three meetings, one slot, all mandatory, none of them with an agenda.'
+        },
+        {
+          kind: 'dishwasher', name: 'Broken Dishwasher', lane: 3, speed: 0.65, dir: -1, count: 2,
+          joke: 'Rob: My dishwasher just broke. I do not know why my phone thinks I need to know that while I am riding a bicycle on I-5.'
+        }
+      ],
+      chaser: {
+        name: 'John Lawson',
+        who: 'John Lawson',
+        speed: 0.42,
+        triggerAfter: 3,
+        lines: [
+          'John Lawson: ROB! There you are. Quick one \u2014 can the team lunch go on the corporate card?',
+          'Rob: John. I am on a bicycle. On the I-5.',
+          'John Lawson: So that is a maybe. I will walk with you.'
+        ]
+      },
+      grantedLines: [
+        'BADGE READER: DAILY CORPORATE FRICTION QUOTA MET. WELCOME BACK, ROB.',
+        'John Lawson: Rob! Perfect timing. About that corporate card \u2014',
+        'Rob: ...You followed me forty miles for a lunch order.'
+      ],
+      boss: {
+        who: 'John Lawson',
+        title: 'John Lawson: The Corporate Card Request',
+        strainLabel: 'RESOLVE',
+        hint: 'HOLD TO KEEP SAYING NO \u2014 EASE OFF BEFORE YOU CAVE!',
+        idle: 'HE SENSES YOU WAVERING \u2014 HE IS REACHING FOR THE CARD.',
+        defeatLines: [
+          'Rob: No. Final answer. Submit it through the expense system like everyone else.',
+          'John Lawson: ...Fine. I will put it on mine.',
+          'Rob: Sixty seconds of cyber, in the can. Lunch time.'
+        ]
+      },
+      partyTheme: 'cheesecake',
+      party: {
+        guests: [
+          { name: 'Shane', c: 9, r: 3 },
+          { name: 'Austin', c: 9, r: 13 },
+          { name: 'Jessica', c: 4, r: 9 },
+          { name: 'Andrew', c: 9, r: 8 },
+          { name: 'John Lawson', c: 15, r: 9 }
+        ],
+        lines: [
+          'Shane: There he is. Rob Tennant, survivor of the I-5.',
+          'Austin: Did John really follow you the whole way?',
+          'Rob: Forty miles. Asking about a lunch order. Never broke stride.',
+          'Jessica: And the Triple-Booked Day?',
+          'Rob: Clipped me twice outside San Clemente.',
+          'John Lawson: I am buying this one. My card. No further questions.',
+          'Andrew: To another month of 60 Seconds of Cyber.',
+          'Shane: And to Rob, who has officially survived another day in security leadership.'
+        ]
+      },
+      outro: 'Sixty seconds of cyber filmed, John Lawson finally told no, and lunch is on his own card. Finally.'
     }
   ];
 })(window);

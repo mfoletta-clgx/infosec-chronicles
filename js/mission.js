@@ -114,6 +114,66 @@
         px(6, 6, 4, 4, '#fff7c9'); px(7, 7, 2, 2, '#8a6b1f');
         px(6, 10, 4, 1, '#fff7c9'); px(5, 13, 6, 1, '#8d8794');
         break;
+      case 'calendar':
+        px(2, 3, 12, 11, '#f7f2ea'); px(2, 3, 12, 3, '#c94a36');
+        px(4, 1, 1, 3, '#8d8794'); px(11, 1, 1, 3, '#8d8794');
+        px(4, 8, 2, 2, '#4b8fd0'); px(7, 8, 2, 2, '#4b8fd0'); px(10, 8, 2, 2, '#e0553f');
+        px(4, 11, 2, 2, '#8d8794'); px(7, 11, 2, 2, '#8d8794');
+        break;
+      case 'teams':
+        px(2, 2, 12, 9, '#4b5fd6'); px(4, 13, 3, 2, '#4b5fd6');
+        px(4, 5, 8, 1, '#f2f2ef'); px(4, 7, 5, 1, '#f2f2ef');
+        px(11, 3, 3, 3, '#e0553f'); px(12, 4, 1, 1, '#f2f2ef');
+        break;
+      case 'budget':
+        px(3, 3, 10, 11, '#3f9c4a'); px(4, 4, 8, 9, '#4bb058');
+        px(6, 6, 4, 6, '#f7f2ea'); px(7, 7, 2, 1, '#2f6a30'); px(7, 10, 2, 1, '#2f6a30');
+        break;
+      case 'mail':
+        px(2, 4, 12, 9, '#f7f2ea'); px(2, 4, 12, 1, '#c94a36');
+        px(2, 4, 6, 5, '#d6cab6'); px(8, 4, 6, 5, '#d6cab6');
+        px(10, 10, 3, 3, '#e0553f'); px(11, 11, 1, 1, '#f7f2ea');
+        break;
+      case 'alert':
+        px(8, 2, 1, 1, '#e0553f'); px(7, 3, 3, 1, '#e0553f'); px(6, 4, 5, 1, '#e0553f');
+        px(5, 5, 7, 1, '#e0553f'); px(4, 6, 9, 1, '#e0553f'); px(3, 7, 11, 1, '#e0553f');
+        px(2, 8, 13, 1, '#e0553f'); px(2, 9, 13, 4, '#e0553f');
+        px(7, 6, 2, 4, '#1a1220'); px(7, 11, 2, 2, '#1a1220');
+        break;
+      case 'triplebooked':
+        px(1, 3, 12, 11, '#d6cab6'); px(1, 3, 12, 3, '#8f2b21');
+        px(4, 6, 10, 10, '#eae5da'); px(4, 6, 10, 3, '#b8392c');
+        px(2, 1, 1, 3, '#8d8794'); px(10, 1, 1, 3, '#8d8794');
+        px(5, 10, 8, 2, '#e0553f');
+        px(5, 13, 8, 2, '#e0553f');
+        px(6, 11, 6, 1, '#f7f2ea');
+        break;
+      case 'card':
+        px(2, 4, 12, 9, '#3f7fd0'); px(2, 4, 12, 2, '#2f6a9c');
+        px(2, 7, 12, 2, '#241f30');
+        px(4, 10, 5, 1, '#f7f2ea'); px(10, 10, 3, 2, '#e8c94a');
+        break;
+      case 'phish':
+        px(9, 0, 2, 6, '#e2e6ec');                        // hook, the giveaway
+        px(6, 5, 5, 2, '#e2e6ec');
+        px(6, 6, 2, 3, '#e2e6ec');
+        px(1, 7, 13, 8, '#eef2f7');                       // envelope
+        px(1, 7, 7, 5, '#dbe4ee'); px(7, 7, 7, 5, '#c7d4e4');
+        px(1, 7, 13, 1, '#a9b8cc');
+        px(1, 13, 13, 2, '#8fa0b8');
+        px(9, 9, 5, 5, '#e0553f');                        // "someone clicked it" badge
+        px(11, 10, 1, 2, '#f7f2ea'); px(11, 13, 1, 1, '#f7f2ea');
+        break;
+      case 'dishwasher':
+        px(1, 3, 14, 12, '#d8dbdd');                      // cabinet
+        px(1, 3, 14, 3, '#aab0b5');                       // control panel strip
+        px(3, 4, 2, 1, '#e0553f'); px(6, 4, 2, 1, '#3a3350');
+        px(1, 8, 14, 1, '#8a9096');                       // door handle
+        px(2, 9, 12, 5, '#2a2530');                       // door ajar, dark gap
+        px(2, 9, 12, 1, '#171017');
+        px(0, 14, 16, 2, '#6fb7e8');                      // leak puddle
+        px(3, 12, 1, 2, '#6fb7e8'); px(9, 12, 1, 2, '#6fb7e8');
+        break;
       default:
         px(4, 4, 8, 8, '#e8c94a'); px(6, 6, 4, 4, '#f7e07a');
     }
@@ -294,6 +354,56 @@
       };
     });
 
+    const spotsPool = THEME_SPOTS[themeName] || CANDIDATES;
+    const traffic = (m.traffic || []).map(t => ({
+      kind: t.kind || 'alert',
+      name: t.name || 'Distraction',
+      joke: t.joke || '',
+      lane: t.lane != null ? t.lane : 7,
+      speed: t.speed || 0.6,
+      dir: t.dir || 1,
+      count: t.count || 2
+    }));
+
+    const hazards = (m.hazards || []).slice(0, 4).map((hz, i) => {
+      const spot = hz.c != null ? { c: hz.c, r: hz.r } : spotsPool[(spotsPool.length - 1 - i) % spotsPool.length];
+      reserved.push(spot);
+      return {
+        kind: hz.kind || 'alert',
+        name: hz.name || 'Security Alert',
+        speed: hz.speed || 0.45,
+        damage: hz.damage || 8,
+        hitMsg: hz.hitMsg || '',
+        c: spot.c, r: spot.r, x: spot.c * T, y: spot.r * T
+      };
+    });
+
+    let lawson = null;
+    if (m.repeatNpc) {
+      const spot = m.repeatNpc.c != null ? { c: m.repeatNpc.c, r: m.repeatNpc.r } : spotsPool[Math.floor(spotsPool.length / 2)];
+      reserved.push(spot);
+      const member = Roster.memberFor(m.repeatNpc.name, 'human');
+      lawson = {
+        name: member.name,
+        look: member.appearance,
+        times: m.repeatNpc.times || 3,
+        appearances: (m.repeatNpc.appearances || []).length ? m.repeatNpc.appearances : [[m.repeatNpc.name + ': Got a minute?']],
+        c: spot.c, r: spot.r, x: spot.c * T, y: spot.r * T
+      };
+    }
+
+    const chaserStart = m.chaser ? {
+      kind: m.chaser.kind || 'calendar',
+      name: m.chaser.name || 'The Triple-Booked Day',
+      who: m.chaser.who || null,
+      look: m.chaser.who ? Roster.lookAt(m.chaser.who, 'human') : null,
+      speed: m.chaser.speed || 0.5,
+      damage: m.chaser.damage || 15,
+      lines: m.chaser.lines || null,
+      triggerAfter: m.chaser.triggerAfter != null ? m.chaser.triggerAfter : 2,
+      c: 1, r: 1, x: T, y: T
+    } : null;
+
     return {
       missionId,
       title: m.title || 'Untitled Operation',
@@ -316,6 +426,13 @@
       npcs,
       finale: m.finale || null,
       collectibles,
+      hazards,
+      traffic,
+      lawson,
+      chaserStart,
+      boss: m.boss || null,
+      waveCutscene: m.waveCutscene || null,
+      partyTheme: m.partyTheme || null,
       party: m.party || null,
       deniedLines: m.deniedLines || null,
       grantedLines: m.grantedLines || null,

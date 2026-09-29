@@ -84,6 +84,22 @@
       })
     },
     {
+      id: 'rob', name: 'Rob', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#5a3620', glasses: true,
+        shirt: '#d9e83c', pants: '#241d29', shoes: '#2c2436', hat: '#3f7fd0'
+      })
+    },
+    {
+      id: 'john-lawson', name: 'John Lawson', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#e8b48c', hair: '#241d29', glasses: true,
+        shirt: '#6fb7e8', pants: '#c9b48c', shoes: '#5a4030'
+      })
+    },
+    {
       id: 'milly', name: 'Milly', role: 'pet', owner: 'Austin',
       notes: 'long-haired chihuahua, cream coat, white chest, wears headphones',
       appearance: Appearance.pet({

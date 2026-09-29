@@ -605,9 +605,56 @@
     ctx.drawImage(sheet, (frame % FRAMES) * S, dirRow(dir) * S, S, S, 0, 0, S * scale, S * scale);
   }
 
+  /** A road bike drawn under the rider. Vertical views show it head/tail on. */
+  function drawBike(ctx, x, y, dir, frame, opts) {
+    opts = opts || {};
+    const frameColor = opts.frame || '#c94a36';
+    const tire = '#1d1a24';
+    const metal = '#c9c4d2';
+    const dark = '#3a3a42';
+    const px2 = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x + a), Math.round(y + b), w, h); };
+    const spin = frame % 2;
+
+    function wheel(cx, cy) {
+      px2(cx - 1, cy - 4, 3, 1, tire);
+      px2(cx - 1, cy + 3, 3, 1, tire);
+      px2(cx - 4, cy - 1, 1, 3, tire);
+      px2(cx + 3, cy - 1, 1, 3, tire);
+      px2(cx - 3, cy - 3, 1, 1, tire); px2(cx + 2, cy - 3, 1, 1, tire);
+      px2(cx - 3, cy + 2, 1, 1, tire); px2(cx + 2, cy + 2, 1, 1, tire);
+      px2(cx - 2, cy - 2, 1, 1, metal); px2(cx + 1, cy + 1, 1, 1, metal);
+      if (spin) { px2(cx - 2, cy + 1, 1, 1, metal); px2(cx + 1, cy - 2, 1, 1, metal); }
+      px2(cx, cy, 1, 1, metal);
+    }
+
+    if (dir === 'left' || dir === 'right') {
+      const flip = dir === 'left';
+      const rear = flip ? 12 : 3;
+      const front = flip ? 3 : 12;
+      wheel(rear, 11);
+      wheel(front, 11);
+      px2(Math.min(rear, front) + 1, 8, Math.abs(front - rear) - 1, 1, frameColor);   // top tube
+      px2(flip ? 7 : 7, 8, 2, 4, frameColor);                                          // seat tube
+      px2(flip ? 10 : 4, 6, 3, 1, dark);                                               // saddle
+      px2(flip ? 2 : 12, 4, 2, 5, metal);                                              // fork
+      px2(flip ? 1 : 11, 4, 4, 1, dark);                                               // handlebar
+      px2(flip ? 8 : 6, 12 - spin, 2, 1, dark);                                        // pedal
+    } else {
+      const cx = 8;
+      px2(cx - 1, 9, 2, 7, tire);                    // wheel below the rider
+      px2(cx - 1, 12, 2, 1, metal);                  // hub
+      px2(cx - 7, 8, 14, 1, dark);                   // handlebar, wide enough to clear the body
+      px2(cx - 8, 7, 2, 3, dark);                    // grips
+      px2(cx + 6, 7, 2, 3, dark);
+      px2(cx - 1, 10, 2, 1, frameColor);
+      px2(cx - 5, 12 + spin, 2, 1, dark);            // pedals
+      px2(cx + 3, 13 - spin, 2, 1, dark);
+      px2(cx - 2, 15, 4, 1, 'rgba(20,12,30,0.35)');
+    }
+  }
+
   /** Small square portrait for dialogue boxes. */
-  function portraitDataURL(appearance, scale) {
-    scale = scale || 4;
+  function portraitDataURL(appearance, scale) {    scale = scale || 4;
     const { canvas, ctx } = newCanvas(S * scale, S * scale);
     ctx.imageSmoothingEnabled = false;
     const sheet = sheetFor(appearance);
@@ -618,5 +665,5 @@
     return canvas.toDataURL();
   }
 
-  global.Sprites = { S, DIRS, FRAMES, buildSheet, sheetFor, draw, renderPreview, portraitDataURL, newCanvas, px, PET_ART };
+  global.Sprites = { S, DIRS, FRAMES, buildSheet, sheetFor, draw, drawBike, renderPreview, portraitDataURL, newCanvas, px, PET_ART };
 })(window);
