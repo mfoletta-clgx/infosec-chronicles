@@ -1082,5 +1082,5 @@
     return out;
   }
 
-  global.World = { T, COLS, ROWS, W, H, THEMES, DECK, ROAD_LANES, createMap, isSolidPixel, freeCells, drawProp, mulberry32, hashString };
+  global.World = { T, COLS, ROWS, W, H, THEMES, DECK, ROAD_LANES, createMap, isSolidPixel, freeCells, drawProp, drawText, textWidth, mulberry32, hashString };
 })(window);

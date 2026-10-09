@@ -88,6 +88,18 @@
     bindInput();
     if (!mission.npcs.length && mission.finale !== 'chickens') state.itemVisible = true;
     buryCollectibles();
+    if (mission.finale === 'surfrun' && mission.surfSets && mission.surfSets.length) {
+      state.surf = {
+        index: 0, set: null, queue: [], total: 0, got: 0, hazards: [], pickup: null,
+        spawnTimer: 0, pickupTimer: 0, curlBase: 34, curlX: 34, x: 150, y: 130,
+        invuln: 0, offset: 0, bannerUntil: 0, wipeouts: 0, finished: false,
+        named: new Set(), joked: new Set()
+      };
+      renderHud();
+      queueScript(mission.openingLines || [], () => beginSurfSet(0));
+      state.raf = requestAnimationFrame(loop);
+      return state;
+    }
     renderHud();
     if (mission.openingLines && mission.openingLines.length) {
       queueScript(mission.openingLines, () => { if (mission.startHint) toast(mission.startHint, 5000); });
@@ -618,7 +630,8 @@
     for (let i = 0; i < 70; i++) state.puffs.push(confettiBit());
     state.confettiUntil = performance.now() + 12000;
     renderHud();
-    queueScript((m.party && m.party.lines) || ['Shane: Welcome in.'], () => win());
+    queueScript((m.party && m.party.lines) || ['Shane: Welcome in.'],
+      () => (m.trivia && !state.triviaDone ? openTrivia() : win()));
   }
 
   function confettiBit() {
@@ -1439,7 +1452,10 @@
     const t = state.mission.trivia;
     if (Missions.checkAnswer(t, value)) {
       el('trivia').hidden = true;
-      win();
+      state.triviaDone = true;
+      const m = state.mission;
+      if (m.party && !state.interior) queueScript(m.triviaCorrectLines || [], () => enterParty(m.partyTheme || 'beach'));
+      else win();
       return;
     }
     state.wrongAnswers++;
@@ -1480,6 +1496,11 @@
     let step;
     if (state.interior) step = 'You are in. Behave yourself.';
     else if (state.itemTaken) step = m.trivia ? 'Answer the riddle to close the ticket.' : 'Head home, hero.';
+    else if (state.surf) {
+      const s = state.surf;
+      step = s.finished ? 'Something is rising out of the whitewater...'
+        : 'Up/Down carve \u00b7 Left/Right trim \u00b7 grab the evidence, dodge the rest \u00b7 ' + s.got + '/' + s.total;
+    }
     else if (state.mission.finale === 'bikecommute') {
       if (state.mode === 'boss') step = 'Mash Space to keep declining. Do not cave!';
       else if (state.mode === 'wave') step = 'Brace for impact...';
@@ -1587,6 +1608,7 @@
     if (state.mode === 'wave') drawWaveScene(ctx, now);
     if (state.mode === 'boss') drawBossScene(ctx, now);
     if (state.mission.finale === 'bikecommute' && state.mode === 'roam' && !state.interior) drawRideHud(ctx);
+    if (state.surf && !state.interior) drawSurfRun(ctx, now);
     drawScent(ctx, now);
   }
 
@@ -1608,6 +1630,319 @@
     Sprites.drawBike(ctx, p.x, p.y, p.dir, p.frame, { frame: '#c94a36' });
     Sprites.draw(ctx, look, p.x, p.y - 4, p.dir, p.frame);
   }
+
+  // ------------------------------------------------------------- surf run
+  // John rides a wave that never ends: the curl chases him from the left,
+  // evidence floats toward him from the right, and so does everything else.
+  const SURF_TOP = 62, SURF_BOTTOM = 214, LIP_Y = 54;
+
+  function beginSurfSet(i) {
+    const s = state.surf;
+    const set = state.mission.surfSets[i];
+    s.index = i;
+    s.set = set;
+    s.queue = (set.pickups || []).slice();
+    s.total = s.queue.length;
+    s.got = 0;
+    s.hazards = [];
+    s.pickup = null;
+    s.spawnTimer = 1400;
+    s.pickupTimer = 700;
+    s.curlX = s.curlBase;
+    s.x = 150; s.y = 130;
+    s.invuln = 0;
+    s.bannerUntil = performance.now() + 2600;
+    renderHud();
+    queueScript(set.intro || [], () => { state.mode = 'surf'; renderHud(); });
+  }
+
+  function surfSpeed() { return (state.surf.set && state.surf.set.speed) || 1.4; }
+
+  function tickSurf(dt) {
+    const s = state.surf;
+    const set = s.set;
+    const f = dt / 16.67;
+    const k = state.keys;
+    s.offset += surfSpeed() * f;
+
+    if (k.up) s.y -= 1.6 * f;
+    if (k.down) s.y += 1.6 * f;
+    if (k.left) s.x -= 1.4 * f;
+    if (k.right) s.x += 1.4 * f;
+    s.x -= 0.3 * f;                                      // the curl is always pulling you back
+    s.y = Math.max(SURF_TOP, Math.min(SURF_BOTTOM, s.y));
+    s.x = Math.min(292, s.x);
+    state.player.frame = (k.up || k.down || k.left || k.right) ? Math.floor(s.offset / 14) % 2 : 0;
+    if (s.invuln > 0) s.invuln -= dt;
+
+    if (set.curlCreep) s.curlX = Math.min(170, s.curlX + set.curlCreep * dt / 1000);
+    if (s.x < s.curlX + 2) { wipeout(); return; }
+
+    // hazards
+    s.spawnTimer -= dt;
+    if (s.spawnTimer <= 0 && set.hazards && set.hazards.length) {
+      const def = set.hazards[Math.floor(Math.random() * set.hazards.length)];
+      const size = def.size || 1;
+      const y = SURF_TOP + Math.random() * (SURF_BOTTOM - SURF_TOP - 16 * (size - 1));
+      s.hazards.push({
+        def, size, x: World.W + 10, y, baseY: y, phase: Math.random() * 6,
+        vx: -surfSpeed() * (0.9 + Math.random() * 0.4) * (def.speed || 1)
+      });
+      if (!s.named.has(def.kind)) { s.named.add(def.kind); toast(def.name + '!', 2000); }
+      s.spawnTimer = (set.spawnEvery || 1100) * (0.7 + Math.random() * 0.6);
+    }
+    const px1 = s.x + 3, px2 = s.x + 15, py1 = s.y - 2, py2 = s.y + 15;
+    for (let i = s.hazards.length - 1; i >= 0; i--) {
+      const h = s.hazards[i];
+      h.x += h.vx * f;
+      if (h.def.move === 'wobble') h.y = h.baseY + Math.sin(s.offset / 22 + h.phase) * 18;
+      else if (h.def.move === 'home') h.y += Math.sign(s.y - h.y) * Math.min(Math.abs(s.y - h.y), 0.45 * f);
+      h.y = Math.max(SURF_TOP - 4, Math.min(SURF_BOTTOM + 2, h.y));
+      if (h.x < -20 - 16 * h.size) { s.hazards.splice(i, 1); continue; }
+      const hs = 16 * h.size;
+      const hit = s.invuln <= 0 && px2 > h.x + 3 && px1 < h.x + hs - 3 && py2 > h.y + 3 && py1 < h.y + hs - 3;
+      if (hit) { s.hazards.splice(i, 1); hitSurfHazard(h.def); return; }
+    }
+
+    // evidence, one piece at a time; anything missed floats around again
+    if (!s.pickup) {
+      s.pickupTimer -= dt;
+      if (s.pickupTimer <= 0 && s.queue.length) {
+        s.pickup = Object.assign({ x: World.W + 10, y: SURF_TOP + 6 + Math.random() * (SURF_BOTTOM - SURF_TOP - 12) }, s.queue.shift());
+      }
+    } else {
+      const p = s.pickup;
+      p.x -= surfSpeed() * 0.8 * f;
+      if (Math.hypot(s.x + 9 - (p.x + 8), s.y + 6 - (p.y + 8)) < 15) { grabSurfPickup(p); return; }
+      if (p.x < -18) { s.queue.push({ kind: p.kind, label: p.label, found: p.found }); s.pickup = null; s.pickupTimer = 500; }
+    }
+  }
+
+  function hitSurfHazard(def) {
+    const s = state.surf;
+    state.hazardHits++;
+    s.invuln = 1300;
+    s.x = Math.max(s.curlX + 14, s.x - 36);
+    if (def.joke && !s.joked.has(def.kind)) {
+      s.joked.add(def.kind);
+      queueScript([].concat(def.joke), () => { state.mode = 'surf'; });
+    } else {
+      toast(def.name + '. Lost speed!', 1400);
+    }
+  }
+
+  function grabSurfPickup(p) {
+    const s = state.surf;
+    s.pickup = null;
+    s.pickupTimer = 900;
+    s.got++;
+    if (s.set.curlCreep) s.curlX = Math.max(s.curlBase, s.curlX - 26);
+    renderHud();
+    if (s.got >= s.total) { finishSurfSet(); return; }
+    if (p.found) queueScript([p.found], () => { state.mode = 'surf'; });
+    else toast('Got: ' + p.label + ' (' + s.got + '/' + s.total + ')', 1800);
+  }
+
+  function finishSurfSet() {
+    const s = state.surf;
+    const m = state.mission;
+    s.hazards = [];
+    s.pickup = null;
+    s.curlX = s.curlBase;
+    const next = s.index + 1;
+    queueScript(s.set.outro || [], () => {
+      if (next < m.surfSets.length) { beginSurfSet(next); return; }
+      s.finished = true;
+      s.bannerUntil = 0;
+      renderHud();
+      queueScript(m.finaleLines || [], () => {
+        state.itemTaken = true;
+        renderHud();
+        if (m.trivia) openTrivia();
+        else enterParty(m.partyTheme || 'beach');
+      });
+    });
+  }
+
+  function wipeout() {
+    const s = state.surf;
+    state.hazardHits++;
+    s.hazards = [];
+    s.curlX = s.curlBase;
+    s.x = 170;
+    s.invuln = 1500;
+    s.wipeouts++;
+    const lines = s.set.wipeoutLines || ['John Lawson: Wiped out! Paddle back in. The evidence is still out there.'];
+    queueScript([lines[(s.wipeouts - 1) % lines.length]], () => { state.mode = 'surf'; });
+  }
+
+  function surfItem(ctx, kind, x, y, size, now) {
+    if (size === 1) { Missions.drawItem(ctx, kind, Math.round(x), Math.round(y), now, true); return; }
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.scale(size, size);
+    Missions.drawItem(ctx, kind, 0, 0, now, true);
+    ctx.restore();
+  }
+
+  function drawSurfRun(ctx, now) {
+    const s = state.surf;
+    const m = state.mission;
+    const W = World.W, H = World.H;
+    const off = s.offset;
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+
+    // sky, sun, clouds
+    const sky = ['#9edcf2', '#a9e1f3', '#b5e6f5', '#c2ebf6', '#cfeff7'];
+    sky.forEach((c, i) => fill(0, i * 9, W, 9, c));
+    fill(262, 8, 16, 16, '#fff2a8'); fill(260, 10, 20, 12, '#fff2a8'); fill(264, 6, 12, 20, '#fff2a8');
+    for (let i = 0; i < 4; i++) {
+      const cx = ((i * 97 - off * 0.08) % (W + 60) + W + 60) % (W + 60) - 30;
+      fill(cx, 10 + (i * 7) % 18, 26, 4, '#f4fbfd'); fill(cx + 5, 7 + (i * 7) % 18, 14, 3, '#f4fbfd');
+    }
+    fill(0, 42, W, 4, '#3a9fcf');
+    fill(0, 46, W, LIP_Y - 46, '#2f8fc2');
+
+    // the wave face, brighter near the lip
+    const face = ['#7fd6ee', '#6ccde9', '#5ac2e3', '#4bb5db', '#3fa8d2', '#349bc8', '#2b8dbd', '#2380b1', '#1d73a4', '#186798', '#145b8b', '#114f7d', '#0f4570', '#0d3c63', '#0b3457', '#0a2d4d'];
+    const band = (H - LIP_Y) / face.length;
+    face.forEach((c, i) => fill(0, LIP_Y + i * band, W, Math.ceil(band), c));
+    for (let i = 0; i < 34; i++) {
+      const sx = ((i * 53 - off * (1 + (i % 3) * 0.25)) % (W + 40) + W + 40) % (W + 40) - 20;
+      const sy = LIP_Y + 10 + (i * 37) % (H - LIP_Y - 16);
+      fill(sx, sy, 8 + (i % 3) * 4, 1, 'rgba(255,255,255,0.28)');
+    }
+    // foam lip
+    for (let x = 0; x < W; x += 4) {
+      const bump = Math.round(Math.sin((x + off * 2) / 11) * 1.5);
+      fill(x, LIP_Y - 3 + bump, 4, 4, '#f2f2ef');
+    }
+    fill(0, LIP_Y + 1, W, 2, 'rgba(255,255,255,0.5)');
+
+    // the curl
+    const cx = s.curlX;
+    ctx.fillStyle = '#0a2a47';
+    ctx.beginPath();
+    ctx.moveTo(0, LIP_Y - 6);
+    ctx.lineTo(cx + 22, LIP_Y - 6);
+    ctx.quadraticCurveTo(cx + 10, LIP_Y + 40, cx, H);
+    ctx.lineTo(0, H);
+    ctx.fill();
+    ctx.fillStyle = '#0d3a5f';
+    ctx.beginPath();
+    ctx.moveTo(0, LIP_Y + 10);
+    ctx.quadraticCurveTo(cx * 0.7, LIP_Y + 30, cx * 0.55, H);
+    ctx.lineTo(0, H);
+    ctx.fill();
+    for (let y = LIP_Y - 6; y < H; y += 3) {
+      const t = (y - LIP_Y + 6) / (H - LIP_Y + 6);
+      const ex = cx + 22 * (1 - t) * (1 - t) + Math.sin(y / 7 + now / 110) * 2.5;
+      fill(ex - 2, y, 4, 3, '#f2f2ef');
+      if ((y + Math.floor(now / 90)) % 9 === 0) fill(ex + 3, y, 2, 2, '#f2f2ef');
+    }
+    for (let i = 0; i < 6; i++) {                              // spray off the top of the lip
+      const a = (now / 220 + i) % 1;
+      fill(cx + 18 + i * 5 * a, LIP_Y - 8 - a * 14, 2, 2, 'rgba(255,255,255,' + (1 - a).toFixed(2) + ')');
+    }
+    if (s.set && s.set.curlCreep && cx > 30) {                // the tsunami is full of last-minute paperwork
+      for (let i = 0; i < 7; i++) {
+        const ang = now / 500 + i * 0.9;
+        const dx = cx * 0.45 + Math.cos(ang) * cx * 0.28, dy = 150 + Math.sin(ang) * 50;
+        fill(dx, dy, 6, 7, '#f7f2ea'); fill(dx + 1, dy + 2, 4, 1, '#8d8794'); fill(dx + 1, dy + 4, 4, 1, '#8d8794');
+      }
+    }
+
+    // evidence, hazards, John
+    if (s.pickup) {
+      const p = s.pickup;
+      fill(p.x + 1, p.y + 15 + Math.sin(now / 200) * 1, 14, 2, 'rgba(255,255,255,0.35)');
+      Missions.drawItem(ctx, p.kind, Math.round(p.x), Math.round(p.y + Math.sin(now / 200 + 1) * 2), now);
+    }
+    s.hazards.forEach(h => {
+      const r = 8 * h.size, gx = h.x + r, gy = h.y + r;
+      const a = 0.45 + 0.2 * Math.sin(now / 160);
+      const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, r + 5);
+      g.addColorStop(0, 'rgba(255, 70, 50, ' + a.toFixed(2) + ')');
+      g.addColorStop(1, 'rgba(255, 70, 50, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(gx, gy, r + 5, 0, Math.PI * 2); ctx.fill();
+      surfItem(ctx, h.def.kind, h.x, h.y, h.size, now);
+    });
+    if (s.pickup) {
+      const p = s.pickup;
+      const text = p.label.replace(/^the\s+/i, '');
+      const w = World.textWidth(text, 1);
+      const lx = Math.round(Math.max(2, Math.min(W - w - 3, p.x + 8 - w / 2)));
+      const ly = Math.round(Math.max(LIP_Y + 4, p.y - 8));
+      fill(lx - 1, ly - 1, w + 2, 7, 'rgba(20,10,30,0.6)');
+      World.drawText(ctx, text, lx, ly, 1, '#f7e07a');
+    }
+    if (s.finished) drawKraken(ctx, now);
+    else if (s.invuln <= 0 || Math.floor(now / 90) % 2) {
+      const bob = Math.round(Math.sin(now / 180) * 1);
+      fill(s.x - 6, s.y + 15, 6, 1, 'rgba(255,255,255,0.7)');   // wake
+      fill(s.x - 12, s.y + 14, 5, 1, 'rgba(255,255,255,0.45)');
+      Sprites.drawSurfboard(ctx, Math.round(s.x), Math.round(s.y) + bob, 'right', state.player.frame);
+      Sprites.draw(ctx, m.heroLook, Math.round(s.x), Math.round(s.y) - 3 + bob, 'right', 0);
+    }
+
+    // HUD
+    if (s.set && !s.finished) {
+      meter(ctx, 8, 6, 84, 8, s.total ? s.got / s.total : 0, '#f7e07a', '');
+      ctx.font = '7px monospace';
+      ctx.fillStyle = '#fff7c9';
+      ctx.fillText('EVIDENCE ' + s.got + '/' + s.total, 12, 13);
+      if (m.surfSets.length > 1) {
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#1a1220';
+        ctx.fillText('SET ' + (s.index + 1) + '/' + m.surfSets.length, W - 8, 13);
+        ctx.textAlign = 'left';
+      }
+      if (state.mode === 'surf' && s.x - s.curlX < 34 && Math.floor(now / 200) % 2) {
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = '#fff7c9';
+        ctx.fillText('THE CURL! >>>', cx + 26, LIP_Y + 20);
+      }
+      if (now < s.bannerUntil) {
+        ctx.fillStyle = 'rgba(20,10,30,0.72)';
+        ctx.fillRect(0, 98, W, 30);
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f7e07a';
+        ctx.fillText(s.set.name || '', W / 2, 112);
+        ctx.font = '7px monospace';
+        ctx.fillStyle = '#fff7c9';
+        if (m.surfSets.length > 1) ctx.fillText('SET ' + (s.index + 1) + ' OF ' + m.surfSets.length, W / 2, 123);
+        ctx.textAlign = 'left';
+      }
+    }
+  }
+
+  /** The Compliance Gap Kraken surfaces out of the whitewater once the last set is done. */
+  function drawKraken(ctx, now) {
+    const s = state.surf;
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+    const bx = 196, by = 96 + Math.sin(now / 400) * 3;
+    for (let i = 0; i < 5; i++) {
+      const tx = bx - 34 + i * 20;
+      for (let j = 0; j < 9; j++) fill(tx + Math.sin(now / 260 + i + j / 2) * 4, by + 44 + j * 7, 7 - Math.floor(j / 3), 7, '#6a3fb0');
+    }
+    fill(bx - 30, by, 64, 50, '#7a4fc0');
+    fill(bx - 24, by - 8, 52, 8, '#7a4fc0');
+    fill(bx - 16, by - 14, 36, 6, '#7a4fc0');
+    fill(bx - 18, by + 14, 12, 10, '#f2f2ef'); fill(bx + 10, by + 14, 12, 10, '#f2f2ef');
+    fill(bx - 13, by + 17, 5, 6, '#1a1220'); fill(bx + 15, by + 17, 5, 6, '#1a1220');
+    fill(bx - 8, by + 32, 20, 10, '#2b2740');                   // the gap
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = '#f7e07a';
+    ctx.textAlign = 'center';
+    ctx.fillText('?', bx + 2, by + 40);
+    ctx.fillText('COMPLIANCE GAP KRAKEN', World.W / 2, 82);
+    ctx.textAlign = 'left';
+    Sprites.drawSurfboard(ctx, Math.round(s.x), Math.round(s.y), 'right', 0);
+    Sprites.draw(ctx, state.mission.heroLook, Math.round(s.x), Math.round(s.y) - 3, 'right', 0);
+  }
+
 
   /** Hand-placed pixels beat canvas text at this resolution. */
   function drawMark(ctx, cx, cy, kind) {
@@ -1641,6 +1976,7 @@
     updatePuffs(dt, now);
     if (state.mode === 'fishing') tickFishing(dt);
     if (state.mode === 'boss') tickBoss(dt);
+    if (state.mode === 'surf') tickSurf(dt);
     if (state.mode === 'wave' && now > state.waveUntil) { state.mode = 'roam'; toast('Head to the office and clock in.', 3500); }
     if (state.petBubble > 0) state.petBubble -= dt;
     tickText(dt);

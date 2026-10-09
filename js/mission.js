@@ -42,12 +42,14 @@
   };
 
   // -------------------------------------------------------------- item pixels
-  function drawItem(ctx, kind, x, y, t) {
+  function drawItem(ctx, kind, x, y, t, plain) {
     const bob = Math.round(Math.sin(t / 260) * 1.5);
     const px = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b + bob, w, h); };
     // glow
-    ctx.fillStyle = 'rgba(255, 236, 150, ' + (0.18 + 0.12 * Math.sin(t / 180)) + ')';
-    ctx.beginPath(); ctx.arc(x + 8, y + 8 + bob, 8, 0, Math.PI * 2); ctx.fill();
+    if (!plain) {
+      ctx.fillStyle = 'rgba(255, 236, 150, ' + (0.18 + 0.12 * Math.sin(t / 180)) + ')';
+      ctx.beginPath(); ctx.arc(x + 8, y + 8 + bob, 8, 0, Math.PI * 2); ctx.fill();
+    }
 
     switch (kind) {
       case 'key':
@@ -174,9 +176,114 @@
         px(0, 14, 16, 2, '#6fb7e8');                      // leak puddle
         px(3, 12, 1, 2, '#6fb7e8'); px(9, 12, 1, 2, '#6fb7e8');
         break;
+      case 'kiosk':
+        px(6, 9, 4, 5, '#8d8794');                        // post
+        px(3, 1, 10, 9, '#241f30');
+        px(4, 2, 8, 4, '#635bff');                        // checkout screen
+        px(5, 3, 4, 1, '#f2f2ef'); px(5, 5, 2, 1, '#f2f2ef');
+        px(4, 7, 2, 1, '#b9b4c4'); px(7, 7, 2, 1, '#b9b4c4'); px(10, 7, 2, 1, '#4bd07a');
+        px(4, 14, 8, 2, '#5b5468');
+        break;
+      case 'diagram':
+        px(2, 3, 12, 10, '#f7f2ea');
+        px(3, 5, 3, 3, '#4b8fd0'); px(10, 5, 3, 3, '#635bff');
+        px(6, 6, 4, 1, '#3c3849'); px(9, 5, 1, 3, '#3c3849');
+        px(7, 9, 3, 3, '#e0553f'); px(8, 8, 1, 1, '#3c3849');
+        px(2, 11, 4, 2, '#cfe8f2');                       // water stain
+        break;
+      case 'cardform':
+        px(2, 2, 12, 12, '#f2f2ef'); px(2, 2, 12, 2, '#c94a36');
+        px(4, 5, 8, 2, '#d6cab6');                        // card number
+        px(4, 8, 5, 2, '#d6cab6'); px(10, 8, 2, 2, '#e0553f');   // expiry + the CVV field
+        px(4, 11, 8, 2, '#3f9c4a');                       // "save to spreadsheet"
+        break;
+      case 'toosmall':
+        px(4, 7, 8, 5, '#f7e07a'); px(9, 4, 4, 4, '#f7e07a');
+        px(13, 6, 2, 1, '#e8a531'); px(11, 5, 1, 1, '#1a1220');
+        px(5, 8, 3, 2, '#e8c94a');
+        px(3, 12, 10, 1, 'rgba(255,255,255,0.6)');
+        break;
+      case 'stripemagic':
+        px(2, 5, 12, 7, '#635bff'); px(3, 6, 10, 5, '#7a73ff');
+        px(5, 8, 6, 1, '#f2f2ef');
+        px(1, 2, 1, 1, '#fff7c9'); px(13, 1, 1, 1, '#fff7c9'); px(14, 13, 1, 1, '#fff7c9'); px(2, 13, 1, 1, '#fff7c9');
+        break;
+      case 'jellyfish':
+        px(4, 2, 8, 1, '#e8a0d8'); px(3, 3, 10, 6, '#e8a0d8');
+        px(6, 4, 4, 3, '#f7f2ea'); px(6, 4, 4, 1, '#c94a36');   // the emailed card number
+        px(4, 9, 1, 5, '#d080c0'); px(7, 9, 1, 6, '#d080c0');
+        px(10, 9, 1, 5, '#d080c0'); px(12, 9, 1, 4, '#d080c0');
+        break;
+      case 'saq':
+        px(3, 2, 10, 13, '#a5713f'); px(4, 4, 8, 10, '#f7f2ea');
+        px(6, 1, 4, 3, '#8d8794');
+        px(5, 6, 6, 1, '#8d8794'); px(5, 8, 5, 1, '#8d8794');
+        px(5, 11, 6, 2, '#e0553f');                       // stale stamp
+        px(4, 14, 1, 2, '#7fc4f0'); px(10, 14, 1, 2, '#7fc4f0');
+        break;
+      case 'shark':
+        px(7, 2, 2, 2, '#5b6b7d'); px(6, 4, 4, 2, '#5b6b7d');
+        px(5, 6, 6, 3, '#5b6b7d'); px(4, 9, 8, 3, '#5b6b7d');
+        px(6, 7, 4, 3, '#e8e07a');                        // password sticky note
+        px(7, 8, 2, 1, '#8a8330');
+        px(0, 12, 16, 2, '#f2f2ef');
+        break;
+      case 'puffer':
+        px(0, 6, 3, 4, '#d9b23a');
+        px(3, 3, 10, 10, '#e8c94a'); px(4, 2, 8, 1, '#e8c94a'); px(4, 13, 8, 1, '#e8c94a');
+        [[2, 2], [7, 0], [12, 1], [14, 5], [14, 10], [12, 14], [7, 15], [2, 13]].forEach(([sx, sy]) => px(sx, sy, 1, 1, '#a07d24'));
+        px(4, 9, 8, 3, '#f7f2ea');
+        px(10, 5, 2, 2, '#f2f2ef'); px(11, 6, 1, 1, '#1a1220');
+        px(13, 8, 1, 1, '#c94a36');
+        px(5, 5, 4, 3, '#3f7fd0'); px(5, 6, 4, 1, '#241f30');   // the card it should not be taking
+        break;
+      case 'stingray':
+        px(2, 6, 11, 4, '#635bff'); px(4, 5, 7, 6, '#635bff'); px(6, 4, 3, 8, '#635bff');
+        px(5, 5, 1, 6, '#f2f2ef'); px(8, 4, 1, 8, '#f2f2ef'); px(11, 6, 1, 4, '#f2f2ef');
+        px(3, 7, 1, 1, '#1a1220'); px(3, 9, 1, 1, '#1a1220');
+        px(13, 8, 3, 1, '#4a4290');
+        break;
+      case 'binder':
+        px(3, 2, 10, 13, '#2f4a75'); px(3, 2, 2, 13, '#1f3355');
+        px(6, 5, 6, 3, '#f7f2ea'); px(7, 6, 4, 1, '#8d8794');
+        px(4, 4, 1, 1, '#b9b4c4'); px(4, 8, 1, 1, '#b9b4c4'); px(4, 12, 1, 1, '#b9b4c4');
+        break;
+      case 'spreadsheet':
+        px(2, 3, 12, 11, '#f2f2ef'); px(2, 3, 12, 3, '#3f9c4a');
+        px(6, 6, 1, 8, '#b9d9b9'); px(10, 6, 1, 8, '#b9d9b9');
+        px(2, 9, 12, 1, '#b9d9b9'); px(2, 12, 12, 1, '#b9d9b9');
+        px(7, 7, 3, 1, '#e0553f'); px(3, 10, 3, 1, '#e0553f');
+        break;
+      case 'server':
+        px(3, 2, 10, 13, '#2b2740');
+        px(4, 3, 8, 3, '#3c3849'); px(4, 7, 8, 3, '#3c3849'); px(4, 11, 8, 3, '#3c3849');
+        px(10, 4, 1, 1, '#4bd07a'); px(10, 8, 1, 1, '#e8c94a'); px(10, 12, 1, 1, '#e0553f');
+        px(5, 4, 3, 1, '#f7e07a');                        // "TEST" label
+        break;
+      case 'crab':
+        px(4, 7, 8, 5, '#e0553f'); px(5, 6, 6, 1, '#e0553f');
+        px(1, 4, 3, 3, '#e0553f'); px(12, 4, 3, 3, '#e0553f');
+        px(2, 7, 2, 2, '#c94a36'); px(12, 7, 2, 2, '#c94a36');
+        px(6, 4, 1, 2, '#1a1220'); px(9, 4, 1, 2, '#1a1220');
+        px(3, 12, 1, 2, '#c94a36'); px(6, 12, 1, 2, '#c94a36'); px(9, 12, 1, 2, '#c94a36'); px(12, 12, 1, 2, '#c94a36');
+        px(10, 1, 4, 3, '#f7f2ea');                       // the evidence it ran off with
+        break;
+      case 'octopus':
+        px(4, 1, 8, 7, '#7a4fc0'); px(5, 0, 6, 1, '#7a4fc0');
+        px(6, 3, 1, 2, '#f2f2ef'); px(9, 3, 1, 2, '#f2f2ef');
+        [2, 4, 6, 9, 11, 13].forEach((ax, i) => px(ax, 8, 1, 5 + (i % 2) * 2, '#6a3fb0'));
+        px(0, 10, 3, 3, '#f7f2ea'); px(13, 11, 3, 3, '#e8c94a');   // tickets and patches in its arms
+        break;
+      case 'ghost':
+        px(4, 2, 8, 10, 'rgba(242,242,239,0.85)'); px(5, 1, 6, 1, 'rgba(242,242,239,0.85)');
+        px(4, 12, 2, 2, 'rgba(242,242,239,0.85)'); px(7, 12, 2, 2, 'rgba(242,242,239,0.85)'); px(10, 12, 2, 2, 'rgba(242,242,239,0.85)');
+        px(6, 4, 1, 2, '#1a1220'); px(9, 4, 1, 2, '#1a1220');
+        px(5, 8, 6, 3, '#3f7fd0'); px(5, 9, 6, 1, '#241f30');      // a card it should not be holding
+        break;
       default:
         px(4, 4, 8, 8, '#e8c94a'); px(6, 6, 4, 4, '#f7e07a');
     }
+    if (plain) return;
     // sparkle
     const s = Math.floor(t / 220) % 4;
     ctx.fillStyle = '#fff7c9';
@@ -432,6 +539,9 @@
       chaserStart,
       boss: m.boss || null,
       waveCutscene: m.waveCutscene || null,
+      surfSets: m.surfSets || null,
+      finaleLines: m.finaleLines || null,
+      triviaCorrectLines: m.triviaCorrectLines || null,
       partyTheme: m.partyTheme || null,
       party: m.party || null,
       deniedLines: m.deniedLines || null,

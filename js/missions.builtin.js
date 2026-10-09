@@ -216,6 +216,120 @@
         ]
       },
       outro: 'Sixty seconds of cyber filmed, John Lawson finally told no, and lunch is on his own card. Finally.'
+    },
+    {
+      missionId: 'ep-06-scope-creep',
+      title: 'Operation: Scope Creep',
+      hero: 'John Lawson',
+      objective: 'Surf through audit day: grab 4 pieces of evidence, dodge the scope creep, and face the Compliance Gap Kraken.',
+      theme: 'beach',
+      finale: 'surfrun',
+      reward: 'No Surprises',
+      item: { kind: 'kiosk', name: 'the pier kiosk', c: 10, r: 7 },
+      dialogue: [
+        'John Lawson: Day off. Six-foot sets, offshore wind, and my phone sealed in a waterproof bag where it cannot hurt me.'
+      ],
+      surfSets: [
+        {
+          name: 'AUDIT DAY',
+          speed: 1.5, spawnEvery: 1100, curlCreep: 4,
+          intro: [
+            'PCI PAGER: *BZZT* *BZZT* ANNUAL PCI ASSESSMENT STARTS AT 2PM. AUDITOR ETA: YOUR BEACH. BRING EVIDENCE.',
+            'John Lawson: The waterproof bag has betrayed me.',
+            'John Lawson: Four pieces of evidence floating around out here. Because of course they are. Up/Down to carve, Left/Right to trim. Grab the evidence, dodge the sea life, and do NOT let the curl eat me.'
+          ],
+          wipeoutLines: [
+            'John Lawson: Wiped out! The curl does not accept late evidence either.',
+            'John Lawson: Swallowed by the wave. Glub. Paddling back out.',
+            'John Lawson: That was the ocean telling me to stop standing still. Noted.'
+          ],
+          pickups: [
+            { kind: 'diagram', label: 'the PCI scope map', found: 'John Lawson: The scope map! Last updated by a guy who left in 2023. Well. It is a start.' },
+            { kind: 'spreadsheet', label: 'the mystery spreadsheet', found: 'John Lawson: "refunds_FINAL_final_v3.xlsx". Full card numbers. In a spreadsheet. In the ocean. Every system that touched this file just joined the audit.' },
+            { kind: 'mail', label: 'the vendor change notice', found: 'John Lawson: "Payment integration updated. Effective: last Tuesday." The vendor moved checkout off Stripe onto their own server and told nobody. Love that for me.' },
+            { kind: 'alert', label: 'the quarterly scan reports', found: 'John Lawson: All four quarterly scans. Dated. Signed. I am not crying, it is sea spray.' }
+          ],
+          hazards: [
+            {
+              kind: 'puffer', name: 'Rogue Deployment Pufferfish',
+              joke: [
+                'PUFFERFISH: SURPRISE! I PUFFED UP INTO A CARD KIOSK ON THE PIER! I HAVE BEEN LIVE FOR MONTHS!',
+                'John Lawson: Nobody told PCI. Anything that takes cards gets scoped BEFORE launch, not discovered by a guy on a surfboard.'
+              ]
+            },
+            {
+              kind: 'jellyfish', name: 'Cardholder Data Jellyfish', move: 'home', speed: 0.85,
+              joke: [
+                'JELLYFISH: Bloop. I drifted out of the payment flow and into your shared drive. And your laptop. And your backups.',
+                'John Lawson: Loose card data stings every system it touches, and each one lands in scope. Find it, delete it, and the jellyfish has nowhere to float.'
+              ]
+            },
+            {
+              kind: 'shark', name: 'Scope Change Shark', move: 'wobble', size: 2, speed: 0.9,
+              joke: 'John Lawson: The Scope Change Shark! One quiet vendor change and the whole card environment moves under you. Every change gets a scope check. ESPECIALLY the sneaky ones.'
+            },
+            {
+              kind: 'crab', name: 'Lost Evidence Crab', speed: 1.1,
+              joke: [
+                'LOST EVIDENCE CRAB: *snip snip* Firewall review? Never heard of it.',
+                'John Lawson: If you cannot prove a control ran, the auditor treats it as never done. Give it BACK.'
+              ]
+            },
+            {
+              kind: 'stingray', name: 'Stripe-Handles-It Stingray', move: 'wobble',
+              joke: [
+                'STINGRAY: Relax! Stripe handles ALL of it. Look at my stripes!',
+                'John Lawson: Stripe handles what actually goes through Stripe. Anything that touches the card before it gets there is still yours. Nice stripes, though.'
+              ]
+            }
+          ],
+          outro: ['John Lawson: Four for four! Scope map, spreadsheet, vendor notice, scans. Riding this one all the way to the\u2014']
+        }
+      ],
+      finaleLines: [
+        'John Lawson: ...why is the whitewater looking at me?',
+        'COMPLIANCE GAP KRAKEN: RAAAWR. THE NEW PIER KIOSK HAS NO QUARTERLY ACCESS REVIEW.',
+        'The Auditor: The Kraken is right, Mr. Lawson. I noticed too. What is the plan?',
+        'John Lawson: Okay. Gaps happen. How I handle this one is the real test.'
+      ],
+      triviaRiddle: {
+        question: 'John Lawson: "The Kraken found a real gap: no access review on the new kiosk. What do I do?"',
+        choices: [
+          'Backdate an access review and hope the Kraken cannot read.',
+          'Declare the kiosk out of scope because it is "new."',
+          'Own it: assess the risk, confirm what is actually exposed, start a remediation plan with an owner and a date, and tell the auditor up front.',
+          'Throw the scope map at the Kraken and paddle away.'
+        ],
+        answer: 'Own it: assess the risk, confirm what is actually exposed, start a remediation plan with an owner and a date, and tell the auditor up front.',
+        hint: 'Auditors deal with gaps all the time. What they cannot work with is surprises or cover-ups.'
+      },
+      triviaCorrectLines: [
+        'The Auditor: Found it, sized it, owner and a date? That I can work with. It is surprises and cover-ups I cannot.',
+        'COMPLIANCE GAP KRAKEN: ...that was... very reasonable. *sinks back into the sea*',
+        'John Lawson: Evidence all year, a scope check on every change. Now, about those six-foot sets...'
+      ],
+      partyTheme: 'beach',
+      party: {
+        guests: [
+          { name: 'Rob', c: 5, r: 6 },
+          { name: 'Andrew', c: 14, r: 6 },
+          { name: 'Jessica', c: 4, r: 10 },
+          { name: 'Shane', c: 16, r: 10 },
+          { name: 'Austin', c: 8, r: 8 },
+          { name: 'The Auditor', c: 12, r: 8 }
+        ],
+        lines: [
+          'Rob: John Lawson. On a surfboard. Running a PCI assessment.',
+          'John Lawson: I was surfing. The assessment found me.',
+          'Jessica: Is it true the Scope Change Shark got you twice?',
+          'John Lawson: Three times. Same vendor change every time.',
+          'Andrew: And the Kraken?',
+          'The Auditor: Documented, owned, and on a remediation plan. Best gap I have seen all year.',
+          'Austin: So... only thirty-one more environments to go?',
+          'Shane: To John, the only assessor who brings his own wetsuit.'
+        ]
+      },
+      outro: 'Rogue kiosk scoped, haunted spreadsheet deleted, vendor change caught, and the Kraken handled with a plan instead of a cover-up. PCI is not one audit a year. It is knowing what changed, every day.'
     }
   ];
 })(window);

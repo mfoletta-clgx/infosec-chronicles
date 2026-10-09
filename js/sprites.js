@@ -653,6 +653,31 @@
     }
   }
 
+  /** Surfboard drawn under the rider, with a little wake behind it. */
+  function drawSurfboard(ctx, x, y, dir, frame, opts) {
+    opts = opts || {};
+    const board = opts.board || '#f7e07a';
+    const stripe = opts.stripe || '#e0553f';
+    const px2 = (a, b, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x + a), Math.round(y + b), w, h); };
+    const bob = frame % 2;
+    if (dir === 'left' || dir === 'right') {
+      const tail = dir === 'left' ? 17 : -3;
+      px2(-1, 12 + bob, 18, 4, board);
+      px2(dir === 'left' ? -2 : 17, 13 + bob, 1, 2, board);
+      px2(0, 13 + bob, 16, 1, stripe);
+      px2(tail, 14 + bob, 2, 1, 'rgba(255,255,255,0.7)');
+      px2(tail + (dir === 'left' ? 3 : -3), 15 + bob, 2, 1, 'rgba(255,255,255,0.45)');
+    } else {
+      const wake = dir === 'up' ? 19 : -3;
+      px2(3, 3 + bob, 10, 15, board);
+      px2(4, 1 + bob, 8, 2, board);
+      px2(4, 18 + bob, 8, 1, board);
+      px2(7, 2 + bob, 2, 16, stripe);
+      px2(2, wake + bob, 3, 1, 'rgba(255,255,255,0.7)');
+      px2(11, wake + bob, 3, 1, 'rgba(255,255,255,0.7)');
+    }
+  }
+
   /** Small square portrait for dialogue boxes. */
   function portraitDataURL(appearance, scale) {    scale = scale || 4;
     const { canvas, ctx } = newCanvas(S * scale, S * scale);
@@ -665,5 +690,5 @@
     return canvas.toDataURL();
   }
 
-  global.Sprites = { S, DIRS, FRAMES, buildSheet, sheetFor, draw, drawBike, renderPreview, portraitDataURL, newCanvas, px, PET_ART };
+  global.Sprites = { S, DIRS, FRAMES, buildSheet, sheetFor, draw, drawBike, drawSurfboard, renderPreview, portraitDataURL, newCanvas, px, PET_ART };
 })(window);
