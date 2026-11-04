@@ -330,6 +330,112 @@
         ]
       },
       outro: 'Rogue kiosk scoped, haunted spreadsheet deleted, vendor change caught, and the Kraken handled with a plan instead of a cover-up. PCI is not one audit a year. It is knowing what changed, every day.'
+    },
+    {
+      missionId: 'ep-07-gone-phishing',
+      title: 'Operation: Gone Phishing',
+      hero: 'Saima',
+      objective: 'A "free lunch" email is loose in the Cotality office. Spot the phishing clues and report it with the Phish button!',
+      startHint: 'Austin is waving you over \u2014 follow the arrow to his desk.',
+      theme: 'cotality',
+      finale: 'phish',
+      reward: 'Hook, Line & Thinker',
+      item: { kind: 'mail', name: 'the phishing email', c: 13, r: 7 },
+      npcSpots: { Austin: { c: 15, r: 5 } },
+      dialogue: [
+        'Saima: October. Cybersecurity Awareness Month. Posters up, booth stocked, phishing training live.',
+        'Saima: What could possibly\u2014',
+        'Austin: SAIMA! Over here! Microsoft says Rob approved free lunch for awareness month!'
+      ],
+      phish: {
+        deskLines: [
+          'Austin: Look. Microsoft Teams Rewards. Free team lunch, approved by Rob. Very official.',
+          'Saima: I run the phishing training, and even I would not promise free lunch. Let me see.',
+          'Austin: Is this one of your phishing tests?',
+          'Saima: You do not have to guess. Test or real, the answer is the same. Let\u2019s go through it together.'
+        ],
+        intro: 'Saima: Click anything that looks off. There are three classic phishing clues hiding in here.',
+        from: { name: 'Microsoft Teams Rewards', address: 'rewards@microsoft-teamss.example', clue: 'sender' },
+        to: 'Austin',
+        subject: [
+          { text: 'ACTION REQUIRED: Claim your team lunch in 10 minutes', clue: 'urgency' }
+        ],
+        body: [
+          ['Hello Austin,'],
+          ['Rob ', { text: 'has approve', clue: 'grammar' }, ' your complimentary team lunch for Cybersecurity Awareness Month.'],
+          ['You must verify ', { text: 'you\u2019re company account', clue: 'grammar' }, ' ', { text: 'within 10 minutes or your voucher will be cancelled.', clue: 'urgency' }, ' ', { text: 'Do not contact your manager as this will delay approval.', clue: 'urgency' }]
+        ],
+        link: {
+          text: 'CLAIM YOUR LUNCH',
+          url: 'https://microsoft-teamss.example/claim',
+          clue: 'sender',
+          coach: 'Saima: Whoa, do not click! Hover over links instead. See the preview? microsoft-teamss.example. Not Microsoft. Not lunch.'
+        },
+        signature: 'Microsoft Team Support',
+        clues: [
+          {
+            id: 'sender', label: 'Lookalike domain',
+            coach: 'Saima: Check the full address, not just the display name. "microsoft-teamss" with two S\u2019s is a lookalike. Anyone can type "Microsoft" as their name.'
+          },
+          {
+            id: 'grammar', label: 'Grammar errors',
+            coach: 'Saima: "Rob has approve." "You\u2019re company account." Real company emails go through a lot of review. Sloppy grammar is a red flag. (Just remember: polished emails can be phishing too.)'
+          },
+          {
+            id: 'urgency', label: 'Urgency & pressure',
+            coach: 'Saima: Ten minutes, cancelled vouchers, and "do not contact your manager"? That pressure is the point. They want you acting before you start thinking.'
+          }
+        ],
+        allFound: 'That is all three. Now hit the Phish button up top.',
+        fishEarly: 'Saima: Phish is always the right call. You never need to be sure first. But stick with me and spot all three clues, so you will recognize the next one.',
+        wrong: {
+          reply: 'Saima: Replying tells them your inbox is real and that you are listening. Do not engage. Report it.',
+          forward: 'Saima: Forwarding spreads the bait to someone else. The Phish button sends it straight to the security team instead.',
+          delete: 'Saima: Deleting protects you, but not the next person. Reporting with Phish lets security warn everyone and block it.'
+        },
+        reportedLines: [
+          'OUTLOOK: Thank you for reporting. This message has been sent to the security team.',
+          'Saima: That is it. Something phishy? Hit Phish. Done.',
+          'Austin: Great. Great great great. So, hypothetically\u2026',
+          'Austin: \u2026what if someone already clicked the link? And typed in their password? Ten minutes ago?'
+        ]
+      },
+      triviaRiddle: {
+        question: 'Saima: "Thank you for telling me, Austin. That is exactly the right instinct. So he already entered his password on that fake page. What should he do now?"',
+        choices: [
+          'Stay quiet and hope nobody notices. It was only a lunch voucher.',
+          'Wait a few days and see if anything weird happens to his account.',
+          'Report it with Phish and contact the security team immediately. Tell them exactly what was clicked and entered.',
+          'Reply to the email and ask them to please delete his password.'
+        ],
+        answer: 'Report it with Phish and contact the security team immediately. Tell them exactly what was clicked and entered.',
+        hint: 'Speed matters more than embarrassment. The earlier security knows, the earlier they can lock things down.'
+      },
+      triviaCorrectLines: [
+        'Saima: Exactly. You are not in trouble. Clicking happens. Speaking up fast is what lets security reset your password and lock things down.',
+        'Austin: That is a much better answer than the one I was rehearsing.',
+        'Saima: Already clicked? Speak up straight away. Now come on, the awareness booth has something better than a fake voucher.'
+      ],
+      partyTheme: 'cotalityparty',
+      party: {
+        guests: [
+          { name: 'Austin', c: 5, r: 10 },
+          { name: 'Rob', c: 14, r: 10 },
+          { name: 'Jessica', c: 3, r: 8 },
+          { name: 'Andrew', c: 16, r: 8 }
+        ],
+        lines: [
+          'Austin: So\u2026 there is no free lunch?',
+          'Saima: Free phishing advice.',
+          'Rob: Also, cupcakes. Real ones. Approved by me, in person, with correct grammar.',
+          'Austin: Finally. A trusted source.',
+          'Jessica: Did the Phish button really get used before lunch on day one?',
+          'Saima: It did. And Austin spoke up after clicking, which is the part that actually saves us.',
+          'Andrew: To Cybersecurity Awareness Month.',
+          'Saima: Something phishy? Hit Phish. Already clicked? Speak up straight away.'
+        ]
+      },
+      outro: 'Lookalike domain spotted, grammar judged, urgency ignored, phish reported with one click, and Austin spoke up fast enough for security to lock things down. Happy Cybersecurity Awareness Month.'
     }
   ];
 })(window);

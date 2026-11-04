@@ -100,6 +100,14 @@
       })
     },
     {
+      id: 'saima', name: 'Saima', role: 'human', pronouns: 'she/her',
+      title: 'Cybersecurity Awareness',
+      appearance: Appearance.human({
+        skin: '#cf9668', hair: '#241d29', longHair: true,
+        shirt: '#e8933a', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
       id: 'milly', name: 'Milly', role: 'pet', owner: 'Austin',
       notes: 'long-haired chihuahua, cream coat, white chest, wears headphones',
       appearance: Appearance.pet({

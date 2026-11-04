@@ -192,6 +192,60 @@ h1, h2, h3 { font-weight: 700; letter-spacing: 0.5px; margin: 0 0 8px; }
 .choices { display: grid; gap: 8px; margin-bottom: 10px; }
 .feedback { font-size: 12px; color: var(--accent-2); min-height: 18px; margin: 8px 0 4px; }
 
+/* -------------------------------------------------------------- phish inbox */
+.phish {
+  position: absolute; inset: 4% 4%;
+  display: flex; flex-direction: column;
+  background: #f3f2f1; color: #201f1e;
+  border: 3px solid #e8933a; border-radius: 4px;
+  overflow: auto; font-size: 12px; outline: none;
+}
+.ol-ribbon {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  background: #0f6cbd; padding: 6px 8px;
+}
+.ol-app { color: #fff; font-weight: 700; margin-right: auto; letter-spacing: 0.5px; }
+.ol-btn {
+  font: inherit; font-size: 11px; cursor: pointer;
+  background: #fff; color: #201f1e; border: 1px solid #c8c6c4; border-radius: 3px; padding: 4px 9px;
+}
+.ol-btn:hover, .ol-btn:focus-visible { background: #edebe9; outline: 2px solid #201f1e; outline-offset: 1px; }
+.ol-fish { font-weight: 700; border-color: #e8933a; }
+.ol-fish.ready { background: #e8933a; color: #1a1220; animation: fishpulse 1s ease-in-out infinite; }
+@keyframes fishpulse { 50% { box-shadow: 0 0 0 4px rgba(232, 147, 58, 0.45); } }
+.ol-mail { background: #fff; margin: 8px; padding: 10px 12px; border: 1px solid #e1dfdd; flex: 1; }
+.ol-subject { font-size: 14px; margin: 0 0 6px; }
+.ol-from, .ol-to { margin: 0 0 2px; color: #605e5c; }
+.ol-to { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #edebe9; }
+.ol-body p { margin: 0 0 8px; line-height: 1.5; }
+.ol-sig { color: #605e5c; }
+.clue {
+  font: inherit; color: inherit; background: transparent; cursor: pointer;
+  border: 0; border-bottom: 1px dashed #a19f9d; padding: 0 1px; text-align: left;
+}
+.clue:hover, .clue:focus-visible { background: #fff4ce; outline: none; }
+.clue.found { background: #fde7e9; border-bottom: 2px solid #c50f1f; }
+.clue.found::after {
+  content: attr(data-label); margin-left: 4px; padding: 0 4px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  background: #c50f1f; color: #fff; border-radius: 2px;
+}
+.ol-cta-wrap { text-align: center; }
+.ol-cta {
+  font: inherit; font-weight: 700; cursor: pointer;
+  background: #0f6cbd; color: #fff; border: 0; border-radius: 3px; padding: 7px 16px;
+}
+.ol-status {
+  display: block; font-family: monospace; font-size: 11px; color: #605e5c;
+  background: #f3f2f1; border: 1px solid #e1dfdd; padding: 3px 6px;
+}
+.ol-status.shown { color: #c50f1f; font-weight: 700; }
+.ol-progress { margin: 0 8px; font-weight: 700; color: #0f6cbd; }
+.ol-coach {
+  margin: 6px 8px 8px; padding: 8px 10px; min-height: 18px;
+  background: #241d3a; color: #f3eefb; border-left: 3px solid #e8933a; line-height: 1.45;
+}
+
 input[type="text"], input:not([type]), textarea, select {
   font: inherit; font-size: 13px;
   background: #171226; color: var(--ink);

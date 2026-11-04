@@ -403,7 +403,8 @@
     const hero = onBoat ? { c: 9, r: 8 } : { c: 10, r: 12 };
     const reserved = [hero];
     const npcs = npcOrder.slice(0, 5).map((name, i) => {
-      const spot = spots[i] || { c: 4 + i * 3, r: 5 };
+      const pinned = m.npcSpots && m.npcSpots[name];
+      const spot = pinned ? { c: pinned.c, r: pinned.r } : (spots[i] || { c: 4 + i * 3, r: 5 });
       reserved.push(spot);
       const member = Roster.memberFor(name, 'human');
       return {
@@ -413,7 +414,7 @@
         lines: npcMap.get(name),
         c: spot.c, r: spot.r,
         x: spot.c * T, y: spot.r * T,
-        dir: 'down',
+        dir: (pinned && pinned.dir) || 'down',
         talked: false
       };
     });
@@ -546,6 +547,7 @@
       party: m.party || null,
       deniedLines: m.deniedLines || null,
       grantedLines: m.grantedLines || null,
+      phish: m.phish || null,
       chickens,
       item: { kind: item.kind, label: item.label, c: itemSpot.c, r: itemSpot.r, x: itemSpot.c * T, y: itemSpot.r * T },
       heroSpawn: { x: hero.c * T, y: hero.r * T },

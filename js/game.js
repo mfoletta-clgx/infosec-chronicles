@@ -116,12 +116,16 @@
     if (!state) return;
     cancelAnimationFrame(state.raf);
     unbindInput();
+    const inbox = el('phish');
+    if (inbox) { inbox.hidden = true; inbox.innerHTML = ''; }
     state = null;
   }
 
   // ------------------------------------------------------------------ input
   function onKeyDown(e) {
     if (!state) return;
+    // The inbox is real buttons; let Space/Enter/Tab reach them.
+    if (state.mode === 'phish') return;
     if (KEYMAP[e.key]) { state.keys[KEYMAP[e.key]] = true; e.preventDefault(); }
     if (ACTION_KEYS.includes(e.key)) {
       e.preventDefault();
@@ -291,6 +295,7 @@
   }
 
   function talkTo(npc) {
+    if (state.mission.finale === 'phish' && state.mission.phish) { talkPhishTarget(npc); return; }
     if (!npc.talked) {
       npc.talked = true;
       state.talkedCount++;
@@ -613,6 +618,8 @@
     const m = state.mission;
     const guests = (m.party && m.party.guests) || [];
     state.interior = true;
+    // Whoever we talked to outside shows up as a guest, not a ghost standing in the wall.
+    state.mission = Object.assign({}, m, { npcs: [] });
     state.map = World.createMap(themeName, m.missionId + '-inside',
       [{ c: 10, r: 12 }, { c: 10, r: 11 }].concat(guests.map(g => ({ c: g.c, r: g.r }))));
     state.player.x = 10 * T;
@@ -1139,6 +1146,168 @@
     else win();
   }
 
+  // ------------------------------------------------------------- phish inbox
+  function phishClues() { return (state.mission.phish && state.mission.phish.clues) || []; }
+  function phishClueTotal() { return phishClues().length; }
+  function phishCluesFound() { return state.phish ? state.phish.found.size : 0; }
+
+  function talkPhishTarget(npc) {
+    const p = state.mission.phish;
+    if (!npc.talked) { npc.talked = true; state.talkedCount++; }
+    if (state.itemTaken) { queueDialogue(npc.name, npc.look, p.afterLines || npc.lines); return; }
+    const script = p.deskLines || npc.lines.map(l => npc.name + ': ' + l);
+    queueScript(script, () => openPhish());
+    renderHud();
+  }
+
+  function openPhish() {
+    const p = state.mission.phish;
+    const root = el('phish');
+    if (!root) return;
+    state.mode = 'phish';
+    state.phish = state.phish || { found: new Set() };
+    const make = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    };
+    const clueButton = (text, clueId) => {
+      const b = make('button', 'clue', text);
+      b.type = 'button';
+      b.dataset.clue = clueId;
+      b.addEventListener('click', () => spotClue(clueId));
+      return b;
+    };
+
+    root.innerHTML = '';
+    const ribbon = make('div', 'ol-ribbon');
+    ribbon.appendChild(make('span', 'ol-app', 'Outlook'));
+    [['Reply', 'reply'], ['Forward', 'forward'], ['Delete', 'delete']].forEach(([label, key]) => {
+      const b = make('button', 'ol-btn', label);
+      b.type = 'button';
+      b.addEventListener('click', () => phishMistake((p.wrong && p.wrong[key]) || 'Saima: Not that one. Report it instead.'));
+      ribbon.appendChild(b);
+    });
+    const fish = make('button', 'ol-btn ol-fish', '\ud83d\udc1f Phish');
+    fish.type = 'button';
+    fish.id = 'phish-fish';
+    fish.title = 'Report this message as phishing';
+    fish.addEventListener('click', reportPhish);
+    ribbon.appendChild(fish);
+    root.appendChild(ribbon);
+
+    const mail = make('div', 'ol-mail');
+    const subject = make('h3', 'ol-subject');
+    (Array.isArray(p.subject) ? p.subject : [p.subject || '']).forEach(part => {
+      subject.appendChild(typeof part === 'string' ? document.createTextNode(part) : clueButton(part.text, part.clue));
+    });
+    mail.appendChild(subject);
+
+    const from = make('p', 'ol-from');
+    from.appendChild(make('strong', null, p.from.name + ' '));
+    from.appendChild(clueButton('<' + p.from.address + '>', p.from.clue || 'sender'));
+    mail.appendChild(from);
+    mail.appendChild(make('p', 'ol-to', 'To: ' + (p.to || state.mission.npcs[0].name)));
+
+    const body = make('div', 'ol-body');
+    (p.body || []).forEach(para => {
+      const pe = make('p');
+      (Array.isArray(para) ? para : [para]).forEach(part => {
+        pe.appendChild(typeof part === 'string' ? document.createTextNode(part) : clueButton(part.text, part.clue));
+      });
+      body.appendChild(pe);
+    });
+    if (p.link) {
+      const linkWrap = make('p', 'ol-cta-wrap');
+      const link = make('button', 'ol-cta', p.link.text);
+      link.type = 'button';
+      const status = make('span', 'ol-status', 'Hover or focus a link to preview where it really goes.');
+      const preview = () => { status.textContent = p.link.url; status.classList.add('shown'); };
+      link.addEventListener('pointerenter', preview);
+      link.addEventListener('focus', preview);
+      link.addEventListener('click', () => {
+        preview();
+        if (p.link.clue) spotClue(p.link.clue, true);
+        phishMistake(p.link.coach || 'Saima: Do not click! Preview it instead.');
+      });
+      linkWrap.appendChild(link);
+      body.appendChild(linkWrap);
+      body.appendChild(status);
+    }
+    if (p.signature) body.appendChild(make('p', 'ol-sig', p.signature));
+    mail.appendChild(body);
+    root.appendChild(mail);
+
+    root.appendChild(make('p', 'ol-progress'));
+    root.lastChild.id = 'phish-progress';
+    const coach = make('p', 'ol-coach', p.intro || 'Saima: Click anything that looks off. Find the clues, then report it with Phish.');
+    coach.id = 'phish-coach';
+    coach.setAttribute('aria-live', 'polite');
+    root.appendChild(coach);
+
+    state.phish.found.forEach(id => markClue(id));
+    updatePhishProgress();
+    root.hidden = false;
+    renderHud();
+    // Focus the panel, not a clue, so leftover dialogue key-mashing can't click anything.
+    root.tabIndex = -1;
+    setTimeout(() => root.focus(), 60);
+  }
+
+  function markClue(id) {
+    const clue = phishClues().find(c => c.id === id);
+    el('phish').querySelectorAll('.clue[data-clue="' + id + '"]').forEach(b => {
+      b.classList.add('found');
+      if (clue) b.dataset.label = clue.label;
+    });
+  }
+
+  function spotClue(id, quiet) {
+    const clue = phishClues().find(c => c.id === id);
+    if (!clue) return;
+    const fresh = !state.phish.found.has(id);
+    state.phish.found.add(id);
+    markClue(id);
+    updatePhishProgress();
+    renderHud();
+    if (quiet) return;
+    const allFound = phishCluesFound() === phishClueTotal();
+    let text = clue.coach;
+    if (!fresh) text = 'Already spotted: ' + clue.label + '.';
+    else if (allFound) text += ' ' + (state.mission.phish.allFound || 'That is all of them. Hit Phish.');
+    el('phish-coach').textContent = text;
+  }
+
+  function updatePhishProgress() {
+    const n = phishCluesFound(), total = phishClueTotal();
+    el('phish-progress').textContent = 'Phishing clues spotted: ' + n + '/' + total;
+    el('phish-fish').classList.toggle('ready', n === total);
+  }
+
+  function phishMistake(text) {
+    state.wrongAnswers++;
+    el('phish-coach').textContent = text;
+  }
+
+  function reportPhish() {
+    const p = state.mission.phish;
+    if (phishCluesFound() < phishClueTotal()) {
+      el('phish-coach').textContent = p.fishEarly || 'Saima: Phish is always the right call. Spot the rest of the clues first so you know them next time.';
+      return;
+    }
+    closePhish();
+    state.itemTaken = true;
+    renderHud();
+    queueScript(p.reportedLines || ['OUTLOOK: Thank you. This message was reported to the security team.'], () => finishAfterItem());
+  }
+
+  function closePhish() {
+    const root = el('phish');
+    if (root) { root.hidden = true; root.innerHTML = ''; }
+    if (state && state.mode === 'phish') state.mode = 'roam';
+  }
+
   // ---------------------------------------------------------------- fishing
   const REEL_RATE = 0.030;      // progress per ms while reeling
   const SLIP_RATE = 0.011;      // progress lost per ms while the line is slack
@@ -1459,7 +1628,8 @@
       return;
     }
     state.wrongAnswers++;
-    el('trivia-feedback').textContent = state.wrongAnswers === 1
+    state.triviaWrong = (state.triviaWrong || 0) + 1;
+    el('trivia-feedback').textContent = state.triviaWrong === 1
       ? 'Not quite. The firewall logs disagree. Try again!'
       : 'Still no. Need a nudge? Tap the hint.';
     if (state.wrongAnswers >= 1) el('trivia-hint').hidden = false;
@@ -1514,6 +1684,11 @@
           ? 'Follow the dogs\u2019 noses  \u00b7  A = dig  \u00b7  B = ask them'
           : 'Take the consent form back to the scanner.');
     }
+    else if (state.mission.finale === 'phish') {
+      if (state.mode === 'phish') step = 'Find all ' + phishClueTotal() + ' phishing clues, then hit Phish \u00b7 ' + phishCluesFound() + '/' + phishClueTotal();
+      else if (!m.npcs.some(n => n.talked)) step = 'Head to ' + (m.npcs[0] ? m.npcs[0].name + '\u2019s' : 'the') + ' desk \u2014 follow the arrow.';
+      else step = 'Check that email.';
+    }
     else if (state.chickens.length) step = 'Waivers recovered: ' + state.caughtCount + '/' + state.chickens.length + '  \u00b7  B = put out watermelon';
     else if (state.mode === 'fishing') step = 'Hold Space / A to reel him in!';
     else if (m.finale === 'fishing' && state.itemVisible) step = 'Get to the rod at the stern rail.';
@@ -1544,6 +1719,11 @@
       if (Math.hypot(state.player.x - m.item.x, state.player.y - m.item.y) > 34) {
         drawWaypoint(ctx, m.item.x, m.item.y, now);
       }
+    }
+    if (m.finale === 'phish' && !state.itemTaken) {
+      m.npcs.forEach(n => {
+        if (Math.hypot(state.player.x - n.x, state.player.y - n.y) > 34) drawWaypoint(ctx, n.x, n.y - 6, now);
+      });
     }
     state.collectibles.forEach(it => {
       if (!it.taken && !it.buried) Missions.drawItem(ctx, it.kind, it.x, it.y, now);

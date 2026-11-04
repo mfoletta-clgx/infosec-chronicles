@@ -99,6 +99,25 @@
         { c: 8, r: 10, w: 5, h: 2, name: 'dessertcase' }
       ]
     },
+    cotality: {
+      label: 'Cotality HQ \u2014 Cybersecurity Awareness Month',
+      ground: '#5b6b7d', groundAlt: '#53627a', edge: '#2b3440', edgeAlt: '#232b36',
+      sky: '#2b3440', props: ['desk', 'plant', 'printer', 'desk'],
+      edgeRows: 2, extras: 'cotality', density: 12, signText: 'COTALITY',
+      fixed: [
+        { c: 2, r: 2, w: 4, h: 3, name: 'awarenessbooth' },
+        { c: 14, r: 4, w: 3, h: 1, name: 'workdesk' }
+      ]
+    },
+    cotalityparty: {
+      label: 'Cotality Breakroom',
+      ground: '#8d8794', groundAlt: '#837d8a', edge: '#2b3440', edgeAlt: '#232b36',
+      sky: '#2b3440', props: ['plant'],
+      edgeRows: 3, extras: 'cotality', density: 4, signText: 'CYBER AWARENESS MONTH',
+      fixed: [
+        { c: 7, r: 4, w: 6, h: 3, name: 'cupcaketable' }
+      ]
+    },
     road: {
       label: 'I-5 North \u2014 San Diego to Irvine',
       ground: '#4a4a52', groundAlt: '#42424a', edge: '#3a3a42', edgeAlt: '#32323a',
@@ -626,6 +645,7 @@
     else if (th.extras === 'farm') paintFarm(ctx, th, rnd);
     else if (th.extras === 'coop') paintCoopHouse(ctx, th, rnd);
     else if (th.extras === 'cheesecake') paintCheesecake(ctx, th, rnd);
+    else if (th.extras === 'cotality') paintCotality(ctx, th, rnd);
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1066,6 +1086,94 @@
       fill(cx, -5, 6, 2, '#f7f2ea');
     }
     fill(2, 4, w - 4, 2, '#5b5468');
+  }
+
+  function paintCotality(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;
+
+    // glass-and-steel wall
+    fill(0, 0, W, band, '#2b3440');
+    fill(0, band - 3, W, 3, '#3f4a57');
+    for (let x = 4; x < W - 4; x += 20) {
+      fill(x, 4, 14, band - 10, '#3fd0c8');
+      fill(x, 4, 14, 3, '#7ce8e0');
+      fill(x + 6, 4, 1, band - 10, '#2b9c96');
+    }
+
+    const sign = th.signText || 'COTALITY';
+    const scale = 2;
+    const tw = Math.min(W - 24, textWidth(sign, scale));
+    const sx = Math.round((W - tw) / 2);
+    fill(sx - 6, 3, tw + 12, 16, '#1a2029');
+    drawText(ctx, sign, sx, 6, scale, '#4bd0c8');
+
+    // October awareness posters
+    [[14, 'PAUSE'], [W - 54, 'REPORT']].forEach(([px2, word]) => {
+      fill(px2, 6, 40, band - 12, '#f7f2ea');
+      fill(px2, 6, 40, 4, '#e8933a');
+      drawText(ctx, word, px2 + Math.round((40 - textWidth(word, 1)) / 2), 13, 1, '#2b3440');
+    });
+
+    // carpet tiles
+    for (let r = th.edgeRows; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if ((r + c) % 2) fill(c * T, r * T, T, T, th.groundAlt);
+      }
+    }
+    for (let i = 0; i < 24; i++) {
+      fill(T + Math.floor(rnd() * (W - T * 2)), band + Math.floor(rnd() * (H - band - T)), 3, 1, 'rgba(0,0,0,0.12)');
+    }
+
+    (th.fixed || []).forEach(f => {
+      const x = f.c * T, y = f.r * T, w = f.w * T, h = f.h * T;
+      if (f.name === 'awarenessbooth') drawAwarenessBooth(ctx, x, y, w, h);
+      if (f.name === 'workdesk') drawWorkDesk(ctx, x, y, w, h);
+      if (f.name === 'cupcaketable') drawCupcakeTable(ctx, x, y, w, h);
+    });
+  }
+
+  function drawAwarenessBooth(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 2, w, 12, '#e8933a');                    // banner
+    drawText(ctx, 'CYBER MONTH', x + Math.round((w - textWidth('CYBER MONTH', 1)) / 2), y + 5, 1, '#1a1220');
+    y += T;
+    h -= T;
+    fill(0, 4, w, h - 4, '#3f4a57');                 // counter
+    fill(0, 4, w, 3, '#5b6b7d');
+    fill(4, 10, 10, 8, '#f7f2ea');                   // stack of flyers
+    fill(5, 12, 8, 1, '#8d8794'); fill(5, 14, 6, 1, '#8d8794');
+    // a fish sticker bowl, naturally
+    fill(w - 22, 8, 14, 10, '#cfe8f2');
+    fill(w - 19, 12, 6, 3, '#e8933a'); fill(w - 13, 11, 2, 5, '#e8933a');
+  }
+
+  function drawWorkDesk(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 6, w, 6, '#8a6b4a');
+    fill(0, 12, w, 4, '#6b5238');
+    fill(12, -6, 24, 13, '#1a1220');                 // monitor
+    fill(14, -4, 20, 9, '#f7f2ea');                  // Outlook, open
+    fill(14, -4, 20, 2, '#3f7fd0');
+    fill(16, 0, 12, 1, '#e0553f');                   // one very red subject line
+    fill(16, 2, 9, 1, '#8d8794');
+    fill(22, 7, 4, 2, '#3c3849');
+    fill(4, 8, 6, 3, '#f7f2ea');                     // coffee
+  }
+
+  function drawCupcakeTable(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    // footprint includes the row above so nothing gets scattered onto the cupcakes
+    y += T;
+    h -= T;
+    fill(0, 6, w, h - 6, '#f7f2ea');                 // tablecloth
+    fill(0, h - 4, w, 4, '#d6cab6');
+    for (let i = 0; i < 8; i++) {
+      const cx = 6 + i * Math.floor((w - 12) / 8);
+      fill(cx, 4, 7, 5, '#8a5a33');
+      fill(cx - 1, 0, 9, 5, ['#e8933a', '#4bd0c8', '#f7f2ea', '#e8933a'][i % 4]);
+      fill(cx + 3, -1, 1, 1, '#c94a36');
+    }
   }
 
   function isSolidPixel(map, x, y) {
