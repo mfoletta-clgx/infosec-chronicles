@@ -303,7 +303,8 @@
     const lines = npc.lines.slice();
     if (state.talkedCount === state.mission.npcs.length && !state.itemVisible) {
       state.itemVisible = true;
-      lines.push('That is everything we know. ' + capitalize(state.mission.item.label) + ' just turned up on the scanner \u2014 it is glinting somewhere nearby!');
+      lines.push((state.mission.raw && state.mission.raw.itemRevealLine) ||
+        ('That is everything we know. ' + capitalize(state.mission.item.label) + ' just turned up on the scanner \u2014 it is glinting somewhere nearby!'));
     } else if (npc.talked && state.itemVisible) {
       lines.push('Go grab ' + state.mission.item.label + ' already!');
     }
@@ -592,11 +593,13 @@
     state.collected++;
     renderHud();
     const left = collectiblesLeft();
-    queueDialogue(state.mission.hero, state.mission.heroLook, [
+    const m = state.mission;
+    const passkey = m.finale === 'passkey';
+    queueDialogue(m.hero, m.heroLook, [
       item.found || ('Picked up ' + item.label + '.'),
       left > 0
-        ? (left + ' more to go, then we try that scanner again.')
-        : 'Now back to the coop door and get these two enrolled.'
+        ? (passkey ? left + ' more to go, then we try that scanner again.' : left + ' more to go.')
+        : (passkey ? 'Now back to the coop door and get these two enrolled.' : 'That is all of it. Now for ' + m.item.label + '.')
     ]);
   }
 
@@ -629,9 +632,12 @@
     state.pets.forEach((p, i) => { p.x = (9 + i * 2) * T; p.y = 12 * T; p.dir = 'up'; });
     state.partyActors = guests.map(g => ({
       name: g.name,
-      look: g.species
-        ? Appearance.pet({ species: g.species, coat: g.coat || '#c9a06a', accent: g.accent || '#f2e3c8', comb: '#c94a36', beak: '#e8a531' })
-        : Roster.lookAt(g.name, 'human'),
+      look: g.pet
+        ? Roster.lookAt(g.name, 'pet', g.species)
+        : g.species
+          ? Appearance.pet({ species: g.species, coat: g.coat || '#c9a06a', accent: g.accent || '#f2e3c8', comb: '#c94a36', beak: '#e8a531' })
+          : Roster.lookAt(g.name, 'human'),
+      tag: g.tag || g.name,
       x: g.c * T, y: g.r * T, dir: g.dir || 'down'
     }));
     for (let i = 0; i < 70; i++) state.puffs.push(confettiBit());
@@ -1132,9 +1138,16 @@
     if (state.mission.finale === 'fishing') { startFishing(); return; }
     if (state.mission.finale === 'passkey') { useScanner(); return; }
     if (state.mission.finale === 'bikecommute') { useOfficeDoor(); return; }
+    const raw = state.mission.raw || {};
+    if (!state.mission.finale && collectiblesLeft() > 0) {
+      queueDialogue(state.mission.hero, state.mission.heroLook, raw.itemLockedLines || [
+        'Not yet. Still missing ' + collectiblesLeft() + ' piece' + (collectiblesLeft() === 1 ? '' : 's') + ' of evidence.'
+      ]);
+      return;
+    }
     state.itemTaken = true;
     state.mode = 'roam';
-    queueDialogue(state.mission.hero, state.mission.heroLook, [
+    queueDialogue(state.mission.hero, state.mission.heroLook, raw.itemTakenLines || [
       'Got it! ' + capitalize(state.mission.item.label) + ' is secured.',
       state.mission.trivia ? 'One last thing before HQ unlocks the badge...' : 'Ticket closed. Back to shore.'
     ], () => finishAfterItem());
@@ -1142,7 +1155,9 @@
   }
 
   function finishAfterItem() {
-    if (state.mission.trivia) openTrivia();
+    const m = state.mission;
+    if (m.trivia) openTrivia();
+    else if (m.party && !state.interior) enterParty(m.partyTheme || 'beach');
     else win();
   }
 
@@ -1692,6 +1707,10 @@
     else if (state.chickens.length) step = 'Waivers recovered: ' + state.caughtCount + '/' + state.chickens.length + '  \u00b7  B = put out watermelon';
     else if (state.mode === 'fishing') step = 'Hold Space / A to reel him in!';
     else if (m.finale === 'fishing' && state.itemVisible) step = 'Get to the rod at the stern rail.';
+    else if (!m.finale && m.collectibles.length && collectiblesLeft() > 0) {
+      step = 'Evidence collected: ' + state.collected + '/' + m.collectibles.length +
+        (state.talkedCount < total ? '  \u00b7  Talked to: ' + state.talkedCount + '/' + total : '');
+    }
     else if (state.itemVisible) step = 'Find ' + m.item.label + ' (it is glinting).';
     else step = 'Talk to everyone here: ' + state.talkedCount + '/' + total;
     el('hud-step').textContent = step;
@@ -1758,6 +1777,7 @@
     });
     actors.sort((a, b) => a.y - b.y).forEach(a => a.draw());
     drawPuffs(ctx);
+    if (state.interior && m.party && m.party.nameTags) drawNameTags(ctx);
 
     // interaction prompt (rendered as crisp DOM text under the stage)
     let prompt = '';
@@ -1790,6 +1810,19 @@
     if (state.mission.finale === 'bikecommute' && state.mode === 'roam' && !state.interior) drawRideHud(ctx);
     if (state.surf && !state.interior) drawSurfRun(ctx, now);
     drawScent(ctx, now);
+  }
+
+  function drawNameTags(ctx) {
+    const tags = state.partyActors.map(g => ({ text: g.tag, x: g.x, y: g.y }));
+    tags.push({ text: state.mission.hero, x: state.player.x, y: state.player.y });
+    tags.forEach(t => {
+      const label = String(t.text).toUpperCase();
+      const w = World.textWidth(label, 1);
+      const x = Math.round(t.x + 8 - w / 2), y = Math.round(t.y - 8);
+      ctx.fillStyle = 'rgba(20,12,30,0.72)';
+      ctx.fillRect(x - 2, y - 1, w + 4, 7);
+      World.drawText(ctx, label, x, y, 1, '#fff7c9');
+    });
   }
 
   function drawActor(ctx, look, x, y, dir, frame, mark) {

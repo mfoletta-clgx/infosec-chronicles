@@ -108,6 +108,88 @@
       })
     },
     {
+      id: 'mary-margaret', name: 'Mary Margaret', role: 'human', pronouns: 'she/her',
+      title: 'IT Audit (SOC 1 & SOC 2)',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#b5b5bd', longHair: true,
+        shirt: '#5b2d8e', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'dale', name: 'Dale', role: 'human', pronouns: 'he/him',
+      title: 'IT Audit (SOC 1 & SOC 2)',
+      // Matching hair to skin renders as bald.
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#f0cdae',
+        shirt: '#2c2836', pants: '#22345e', shoes: '#5a4030'
+      })
+    },
+    {
+      id: 'maddy', name: 'Maddy', role: 'human', pronouns: 'she/her',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#5a3620', longHair: true,
+        shirt: '#c94a36', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'bernard', name: 'Bernard', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#c08850', hair: '#c08850',
+        shirt: '#3f7fd0', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'cody', name: 'Cody', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#e8b48c', hair: '#241d29',
+        shirt: '#22345e', pants: '#22345e', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'david', name: 'David', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#5a3620', beard: true,
+        shirt: '#3a3a42', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'jason', name: 'Jason', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#3b2415', beard: true, glasses: true,
+        shirt: '#3a3a42', pants: '#2c2836', shoes: '#2c2436'
+      })
+    },
+    {
+      id: 'nnamdi', name: 'Nnamdi', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#5c3720', hair: '#5c3720',
+        shirt: '#2c2836', pants: '#2c2836', shoes: '#241d29'
+      })
+    },
+    {
+      id: 'randy', name: 'Randy', role: 'human', pronouns: 'he/him',
+      title: 'Information Security',
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#b99457',
+        shirt: '#2c2836', pants: '#2c2836', shoes: '#241d29'
+      })
+    },
+    {
+      id: 'sorrel', name: 'Sorrel', role: 'human', pronouns: 'she/her',
+      title: 'Information Security',
+      // Hair color is a placeholder until we know better.
+      appearance: Appearance.human({
+        skin: '#f0cdae', hair: '#5a3620', longHair: true,
+        shirt: '#7a4fc0', pants: '#38405c', shoes: '#2c2436'
+      })
+    },
+    {
       id: 'milly', name: 'Milly', role: 'pet', owner: 'Austin',
       notes: 'long-haired chihuahua, cream coat, white chest, wears headphones',
       appearance: Appearance.pet({

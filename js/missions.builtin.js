@@ -436,6 +436,77 @@
         ]
       },
       outro: 'Lookalike domain spotted, grammar judged, urgency ignored, phish reported with one click, and Austin spoke up fast enough for security to lock things down. Happy Cybersecurity Awareness Month.'
+    },
+    {
+      missionId: 'ep-09-pass-the-gravy',
+      title: 'Operation: Pass the Gravy',
+      hero: 'Maddy',
+      objective: 'The whole team is at the table and the gravy boat is missing. Recover it before the mashed potatoes go cold!',
+      startHint: 'Shane and Rob are in the kitchen. Talk to both, then find the gravy boat.',
+      theme: 'thanksgiving',
+      reward: 'Gravy Incident Resolved',
+      skipTrivia: true,
+      item: { kind: 'gravy', name: 'the gravy boat', c: 15, r: 6 },
+      npcSpots: { Shane: { c: 5, r: 8 }, Rob: { c: 10, r: 7 } },
+      dialogue: [
+        'Maddy: Thanksgiving with the whole team. Seventeen people, one very long table, zero open tickets.',
+        'Maddy: The turkey is carved, the rolls are warm and everyone is seated. So why is nobody eating?',
+        'Shane: Maddy. We have a situation. The gravy boat is missing.',
+        'Shane: It was on the buffet ten minutes ago. Nobody touched it. Somebody definitely touched it.',
+        'Rob: I am declaring a Sev-1 Gravy Incident. The bridge is open.',
+        'Rob: Nobody eats until the gravy is recovered. The mashed potatoes are on a timer.'
+      ],
+      itemRevealLine: 'Hold on. Something is steaming behind the pies on the buffet. That is our gravy. Go!',
+      itemTakenLines: [
+        'Gravy boat recovered. Still warm. Chain of custody intact.',
+        'Okay, everybody \u2014 to the table!'
+      ],
+      partyTheme: 'thanksgivingdinner',
+      party: {
+        nameTags: true,
+        guests: [
+          { name: 'Shane', c: 10, r: 4 },
+          { name: 'Andrew', c: 4, r: 6 },
+          { name: 'Jessica', c: 6, r: 6 },
+          { name: 'Austin', c: 8, r: 6 },
+          { name: 'Rob', c: 10, r: 6 },
+          { name: 'John Lawson', tag: 'John L.', c: 12, r: 6 },
+          { name: 'Saima', c: 14, r: 6 },
+          { name: 'Mary Margaret', tag: 'Mary M.', c: 16, r: 6 },
+          { name: 'Dale', c: 2, r: 7, dir: 'right' },
+          { name: 'Randy', c: 17, r: 7, dir: 'left' },
+          { name: 'Bernard', c: 4, r: 9, dir: 'up' },
+          { name: 'Cody', c: 6, r: 9, dir: 'up' },
+          { name: 'David', c: 8, r: 9, dir: 'up' },
+          { name: 'Jason', c: 12, r: 9, dir: 'up' },
+          { name: 'Nnamdi', c: 14, r: 9, dir: 'up' },
+          { name: 'Sorrel', c: 16, r: 9, dir: 'up' },
+          { name: 'Milly', pet: true, species: 'dog', c: 8, r: 11, dir: 'up' },
+          { name: 'Mochi', pet: true, species: 'dog', c: 12, r: 11, dir: 'up' }
+        ],
+        lines: [
+          'Maddy: Gravy is on the table. Incident resolved.',
+          'Rob: Closing the bridge. This is the only incident bridge I want to be on today.',
+          'John Lawson: Quick one \u2014 can the pies go on the corporate card?',
+          'Rob: John. They are homemade.',
+          'Saima: Reminder: the "FREE TURKEY, CLICK HERE" text going around is phishing. Do not click it.',
+          'Mary Margaret: Do we have evidence the gravy was approved for sharing?',
+          'Dale: I sampled it. In-period. No exceptions.',
+          'Randy: Flew in from Dallas for this. Worth every mile.',
+          'Mochi (Pet): *stares at the turkey with enormous dignity*',
+          'Milly (Pet): *headphones on, already in a food coma*',
+          'Andrew: Before we eat \u2014 one thing each we are thankful for. Go around the table.',
+          'Bernard: MFA.',
+          'Cody: Zero open findings.',
+          'David: No Friday deploys.',
+          'Jason: Servers that patch on the first try.',
+          'Nnamdi: Backups that actually restore.',
+          'Sorrel: Leftovers. Encrypted at rest. In my fridge.',
+          'Maddy: And this team.',
+          'Shane: Happy Thanksgiving, everybody. Now somebody please pass the gravy.'
+        ]
+      },
+      outro: 'Gravy boat recovered, the bridge closed, and seventeen people finally ate. Happy Thanksgiving from the InfoSec team.'
     }
   ];
 })(window);

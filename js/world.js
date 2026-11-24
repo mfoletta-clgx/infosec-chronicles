@@ -118,6 +118,25 @@
         { c: 7, r: 4, w: 6, h: 3, name: 'cupcaketable' }
       ]
     },
+    thanksgiving: {
+      label: 'The Thanksgiving Kitchen',
+      ground: '#b98a55', groundAlt: '#a87a48', edge: '#e8d2b0', edgeAlt: '#d9c09a',
+      sky: '#e8d2b0', props: ['houseplant', 'floorlamp'],
+      edgeRows: 3, extras: 'thanksgiving', density: 4, signText: 'HAPPY THANKSGIVING',
+      fixed: [
+        { c: 3, r: 5, w: 5, h: 2, name: 'kitchen' },
+        { c: 12, r: 4, w: 6, h: 2, name: 'buffet' }
+      ]
+    },
+    thanksgivingdinner: {
+      label: 'Thanksgiving Dinner',
+      ground: '#b98a55', groundAlt: '#a87a48', edge: '#e8d2b0', edgeAlt: '#d9c09a',
+      sky: '#e8d2b0', props: ['houseplant'],
+      edgeRows: 3, extras: 'thanksgiving', density: 2, signText: 'HAPPY THANKSGIVING',
+      fixed: [
+        { c: 3, r: 7, w: 14, h: 2, name: 'feasttable' }
+      ]
+    },
     road: {
       label: 'I-5 North \u2014 San Diego to Irvine',
       ground: '#4a4a52', groundAlt: '#42424a', edge: '#3a3a42', edgeAlt: '#32323a',
@@ -646,6 +665,7 @@
     else if (th.extras === 'coop') paintCoopHouse(ctx, th, rnd);
     else if (th.extras === 'cheesecake') paintCheesecake(ctx, th, rnd);
     else if (th.extras === 'cotality') paintCotality(ctx, th, rnd);
+    else if (th.extras === 'thanksgiving') paintThanksgiving(ctx, th, rnd);
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1086,6 +1106,107 @@
       fill(cx, -5, 6, 2, '#f7f2ea');
     }
     fill(2, 4, w - 4, 2, '#5b5468');
+  }
+
+  function paintThanksgiving(ctx, th, rnd) {
+    const fill = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+    const band = th.edgeRows * T;
+
+    // warm wallpaper with a chair rail
+    fill(0, 0, W, band, '#e8d2b0');
+    for (let x = 0; x < W; x += 8) fill(x, 0, 1, band - 6, 'rgba(201,138,75,0.18)');
+    fill(0, band - 6, W, 6, '#8a5a33');
+    fill(0, band - 6, W, 1, '#a5713f');
+
+    const sign = th.signText || 'HAPPY THANKSGIVING';
+    const scale = 2;
+    const tw = Math.min(W - 24, textWidth(sign, scale));
+    const sx = Math.round((W - tw) / 2);
+    fill(sx - 6, 3, tw + 12, 16, '#6b3a1e');
+    drawText(ctx, sign, sx, 6, scale, '#f2c12e');
+
+    // autumn leaf garland
+    for (let x = 6; x < W - 6; x += 10) {
+      const sag = Math.round(Math.sin(x / 30) * 3);
+      fill(x, 26 + sag, 10, 1, '#5a3620');
+      fill(x + 3, 27 + sag, 4, 3, ['#c94a36', '#e8933a', '#d9a531', '#8a4a3a'][(x / 10) % 4 | 0]);
+    }
+
+    // hardwood planks
+    const plank = 6;
+    let row = 0;
+    for (let y = band; y < H; y += plank, row++) {
+      fill(0, y, W, plank, ['#b98a55', '#c0915c', '#b0824e', '#c4975f'][row % 4]);
+      fill(0, y, W, 1, '#9c6f40');
+      for (let x = (row % 3) * 26; x < W; x += 74) fill(x, y + 1, 1, plank - 1, '#8e6438');
+    }
+    for (let i = 0; i < 24; i++) {
+      fill(T + Math.floor(rnd() * (W - T * 2)), band + Math.floor(rnd() * (H - band - T)), 4, 1, 'rgba(120,86,48,0.28)');
+    }
+
+    (th.fixed || []).forEach(f => {
+      const x = f.c * T, y = f.r * T, w = f.w * T, h = f.h * T;
+      if (f.name === 'kitchen') drawKitchen(ctx, x, y, w, h);
+      if (f.name === 'buffet') drawBuffet(ctx, x, y, w, h);
+      if (f.name === 'feasttable') drawFeastTable(ctx, x, y, w, h);
+    });
+  }
+
+  function drawTurkey(ctx, x, y) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 6, 18, 4, '#f7f2ea');                   // platter
+    fill(2, 1, 14, 7, '#b8641f');                   // roast bird
+    fill(4, 0, 10, 2, '#c97a2e');
+    fill(5, 2, 6, 2, '#d9944a');
+    fill(-1, 3, 3, 2, '#c97a2e'); fill(16, 3, 3, 2, '#c97a2e');   // drumsticks
+    fill(-2, 3, 1, 1, '#f7f2ea'); fill(19, 3, 1, 1, '#f7f2ea');
+  }
+
+  function drawPie(ctx, x, y, filling) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 2, 10, 4, '#d9a05a');
+    fill(1, 1, 8, 3, filling);
+    fill(1, 1, 8, 1, '#e8b870');
+  }
+
+  function drawBuffet(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 0, w, h, '#6b4a2a');                    // sideboard
+    fill(0, 0, w, 3, '#8a6b4a');
+    for (let i = 4; i < w - 4; i += 24) fill(i, 8, 20, h - 12, '#5a3d22');
+    fill(-2, -4, w + 4, 5, '#f7f2ea');              // runner
+    fill(-2, 1, w + 4, 1, '#c94a36');
+    drawTurkey(ctx, x + 6, y - 12);
+    drawPie(ctx, x + 34, y - 10, '#d9741f');        // pumpkin
+    drawPie(ctx, x + 48, y - 10, '#6d1f2b');        // cherry
+    drawPie(ctx, x + 62, y - 10, '#8a5a33');        // pecan
+    fill(w - 20, -10, 12, 7, '#e8eef2');            // mashed potatoes
+    fill(w - 18, -12, 8, 3, '#f7f2ea');
+  }
+
+  function drawFeastTable(ctx, x, y, w, h) {
+    const fill = (a, b, ww, hh, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, ww, hh); };
+    fill(0, 0, w, h, '#f7f2ea');                    // tablecloth
+    fill(0, h - 4, w, 4, '#d6cab6');
+    fill(0, 12, w, 6, '#c94a36');                   // runner
+    fill(0, 13, w, 1, '#e8933a');
+    // a place setting in front of every seat (guests sit on every other tile from column 4)
+    for (let px2 = 16; px2 < w; px2 += 32) {
+      fill(px2 + 3, 2, 10, 6, '#e8eef2'); fill(px2 + 5, 3, 6, 3, '#d9944a');
+      fill(px2 + 3, h - 10, 10, 6, '#e8eef2'); fill(px2 + 5, h - 9, 6, 3, '#d9944a');
+    }
+    const mid = Math.round(w / 2);
+    drawTurkey(ctx, x + mid - 9, y + 8);
+    drawPie(ctx, x + 30, y + 10, '#d9741f');
+    drawPie(ctx, x + w - 40, y + 10, '#8a5a33');
+    // the recovered gravy boat, front and center
+    fill(mid + 14, 12, 10, 4, '#f2f2ef'); fill(mid + 15, 12, 8, 1, '#8a5a33'); fill(mid + 24, 11, 2, 2, '#f2f2ef');
+    fill(mid - 30, 12, 8, 4, '#e8c94a');            // corn bread
+    // candles
+    [mid - 44, mid + 40].forEach(cx => {
+      fill(cx, 6, 2, 8, '#f7f2ea');
+      fill(cx, 3, 2, 3, '#f7e07a');
+    });
   }
 
   function paintCotality(ctx, th, rnd) {

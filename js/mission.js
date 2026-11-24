@@ -280,6 +280,13 @@
         px(6, 4, 1, 2, '#1a1220'); px(9, 4, 1, 2, '#1a1220');
         px(5, 8, 6, 3, '#3f7fd0'); px(5, 9, 6, 1, '#241f30');      // a card it should not be holding
         break;
+      case 'gravy':
+        px(0, 7, 2, 4, '#f2f2ef');                        // handle
+        px(2, 8, 11, 4, '#f2f2ef'); px(3, 12, 9, 2, '#d6d0c4');
+        px(13, 7, 3, 2, '#f2f2ef');                       // spout
+        px(3, 7, 10, 2, '#8a5a33');                       // gravy
+        px(6, 2, 1, 3, 'rgba(255,255,255,0.65)'); px(9, 1, 1, 3, 'rgba(255,255,255,0.65)');
+        break;
       default:
         px(4, 4, 8, 8, '#e8c94a'); px(6, 6, 4, 4, '#f7e07a');
     }
